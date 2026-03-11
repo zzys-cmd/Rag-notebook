@@ -43,20 +43,20 @@ async def get_agent_response(query: str, history: list = None):
     :return: Agent响应
     """
     try:
-        # 构建聊天历史（原有逻辑不变）
+        # 构建聊天历史
         chat_history = []
         if history:
             for user_msg, assistant_msg in history:
                 chat_history.append(HumanMessage(content=user_msg))
                 chat_history.append(AIMessage(content=assistant_msg))
 
-        # 使用Agent处理查询（ainvoke异步调用，适配异步工具）
+        # 使用Agent处理查询（ainvoke异步调用）
         result = await agent_executor.ainvoke({
             "input": query,
             "chat_history": chat_history
         })
 
-        # 检查结果类型（原有逻辑不变）
+        # 检查结果类型
         if isinstance(result, dict):
             return result.get("output", "抱歉，我无法理解您的请求。")
         else:
