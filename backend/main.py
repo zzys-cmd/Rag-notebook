@@ -4,8 +4,8 @@ from fastapi import FastAPI, Request
 from starlette.middleware.cors import CORSMiddleware
 
 from app.router.routers import router as api_router
-from app.services import session_manager as sm
-from app.services.session_manager import SessionManager
+from app.services.database_session_manager import init_database_session_manager
+from app.config.db_config import init_db
 
 app = FastAPI()
 
@@ -42,5 +42,11 @@ async def say_hello(name: str):
 @app.on_event("startup")
 async def startup_event():
     """应用启动时初始化会话管理器"""
-    sm.session_manager = await SessionManager.create()
-    print("会话管理器初始化完成")
+    # 初始化数据库表结构
+    await init_db()
+    print("数据库表结构初始化完成")
+    
+    # 使用数据库版本的会话管理器
+    await init_database_session_manager()
+    print("数据库会话管理器初始化完成")
+

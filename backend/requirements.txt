@@ -3,10 +3,11 @@ python-dotenv
 
 # FastAPI 框架相关
 uvicorn
-fastapi
+fastapi==0.123.0
 pydantic
 aiofiles
 python-multipart
+python-jose[cryptography]
 
 # LangChain 核心库
 langchain
@@ -17,3 +18,7 @@ pypdf
 
 # 向量数据库
 chromadb
+
+# 数据库相关
+sqlalchemy
+aiomysql

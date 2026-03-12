@@ -1,6 +1,7 @@
 from langchain_core.tools import tool
 
 from app.rag.rag_service import RagService
+from app.utils.auth_utils import decode_django_jwt
 
 import datetime
 
@@ -8,6 +9,17 @@ import datetime
 async def rag_summary_tools(query: str) -> str:
     """RAG 摘要工具"""
     return await RagService().rag_summary(query)
+
+@tool(description="从JWT中获取当前用户信息，参数为完整的JWT token字符串")
+async def get_user_info_tools(token: str) -> str:
+    """获取用户信息工具"""
+    payload = decode_django_jwt(token)
+    if payload:
+        user_id = payload.get("user_id", "未知")
+        user_name = payload.get("user_name", "未知")
+        return f"用户信息：\n- 用户ID: {user_id}\n- 用户名: {user_name}"
+    else:
+        return "无法解析JWT token，无法获取用户信息"
 
 
 @tool(description="用于获取天气信息")
