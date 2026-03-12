@@ -3,6 +3,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# node
+node_modules/
+dist/
+
+
 # Virtual Environment
 .venv/
 env/
@@ -16,6 +21,7 @@ venv.bak/
 .vscode/
 *.swp
 *.swo
+.trae
 *~
 
 # Environment variables
@@ -32,6 +38,7 @@ Thumbs.db
 # Logs
 logs
 *.log
+data/
 
 # Database
 *.db
@@ -46,6 +53,7 @@ dist/
 .coverage
 .coverage.*
 .cache
+test/
 
 # Misc
 *.pem
