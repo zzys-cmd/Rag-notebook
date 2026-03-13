@@ -1,24 +1,13 @@
-# 基础依赖
-python-dotenv
-
-# FastAPI 框架相关
-uvicorn
-fastapi==0.123.0
-pydantic
-aiofiles
-python-multipart
-python-jose[cryptography]
-
-# LangChain 核心库
-langchain
-langchain-core
-langchain-community
-langchain-chroma
-pypdf
-
-# 向量数据库
-chromadb
-
-# 数据库相关
-sqlalchemy
-aiomysql
+python-dotenv~=1.2.2
+SQLAlchemy~=2.0.48
+langchain-core~=1.2.17
+aiofiles~=25.1.0
+langchain-text-splitters~=1.1.1
+fastapi~=0.123.0
+starlette~=0.50.0
+pydantic-settings~=2.13.1
+langchain-community~=0.4.1
+python-jose~=3.5.0
+PyYAML~=6.0.3
+pydantic~=2.12.5
+requests~=2.32.5

@@ -3,9 +3,13 @@ import time
 from fastapi import FastAPI, Request
 from starlette.middleware.cors import CORSMiddleware
 
-from app.router.routers import router as api_router
+from app.db.db_config import init_db
+from app.router.chat import chat_router
+from app.router.health import health_router
+
 from app.services.database_session_manager import init_database_session_manager
-from app.config.db_config import init_db
+
+from app.core.failed_response_register import register_exception_handlers
 
 app = FastAPI()
 
@@ -18,7 +22,9 @@ async def add_process_time_header(request: Request, call_next):
     return response
 
 # 集成API路由
-app.include_router(api_router)
+app.include_router(chat_router)
+app.include_router(health_router)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,6 +34,8 @@ app.add_middleware(
     allow_headers=["*"], # 允许的请求头
 )
 
+# 注册异常处理函数
+register_exception_handlers(app)
 
 @app.get("/")
 async def root():
