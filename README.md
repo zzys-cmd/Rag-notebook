@@ -53,12 +53,11 @@
 └── README.md         # 项目说明
 ```
 
-## api文档
+## API 文档
 
-***<u>[智能对话API文档](.\backend\api.md)</u>***
+**_<u>[智能对话API文档](./backend/api.md)</u>_**
 
-**<u>*[用户服务API文档](.\DjangoUserService\api.md)*</u>**
-
+**_<u>[用户服务API文档](./DjangoUserService/api.md)</u>_**
 ## 快速开始 🚀
 
 ### 1. 环境准备
@@ -348,5 +347,6 @@ separators: ["\n\n", "\n", "。", "！", "？", "!", "?", " ", ""]
 MIT License
 
 ## 联系方式
+
 
 如果您有任何问题或建议，请随时联系我们。 😊
