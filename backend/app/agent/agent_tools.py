@@ -22,9 +22,11 @@ async def get_user_info_tools(token: str) -> str:
         return "无法解析JWT token，无法获取用户信息"
 
 
-@tool(description="用于获取天气信息")
-def get_weather_tools(city: str) -> str:
+@tool(description="用于获取天气信息，需要提供城市名称作为参数，你需要从用户输入中提取城市名称，是str类型")
+def get_weather_tools(city: str = None) -> str:
     """获取天气工具"""
+    if not city:
+        return "请提供城市名称"
     return f"【{city}】的天气是晴朗的"
 
 
@@ -32,5 +34,3 @@ def get_weather_tools(city: str) -> str:
 def what_time_is_now() -> str:
     """获取当前年月日时分的工具"""
     return f"当前时间是：{datetime.datetime.now().strftime("%Y-%m-%d %H:%M")}"
-
-
