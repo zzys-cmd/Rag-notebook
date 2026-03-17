@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
+from sqlalchemy import text
 from app.models.chat_history import Base
 
 # 加载环境变量
@@ -45,3 +45,17 @@ async def get_db():
 
         finally:
             await session.close()
+
+
+
+
+async def check_mysql_connection() -> bool:
+    """检查MySQL连接"""
+    try:
+        async with async_engine.connect() as conn:
+            # 执行简单查询
+            await conn.execute(text("SELECT 1"))
+        return True
+    except Exception as e:
+        print(f"MySQL连接失败: {e}")
+        return False

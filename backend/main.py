@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from starlette.middleware.cors import CORSMiddleware
 
 from app.db.db_config import init_db
+from app.db.redis_config import connect_redis, close_redis
 from app.router.chat import chat_router
 from app.router.health import health_router
 
@@ -58,3 +59,12 @@ async def startup_event():
     await init_database_session_manager()
     print("数据库会话管理器初始化完成")
 
+    # 连接Redis
+    await connect_redis()
+    print("Redis连接初始化完成")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """应用关闭时关闭Redis连接"""
+    await close_redis()
+    print("Redis连接已关闭")
