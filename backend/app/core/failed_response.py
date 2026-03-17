@@ -110,7 +110,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     """处理 HTTP 异常（401/403/404/405等）"""
     # 常见HTTP状态码
     custom_msg_map = {
-        401: "未登录，请先登录",
+        401: "请先登录或确保您的token有效",
         403: "无权限访问该接口",
         404: "接口不存在，请检查URL",
         405: "请求方法不支持，请检查请求方式",

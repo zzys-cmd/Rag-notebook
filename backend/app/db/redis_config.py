@@ -5,7 +5,7 @@ import redis.asyncio as redis
 
 REDIS_HOST = "localhost"
 REDIS_PORT = 6379
-REDIS_DB = 0
+REDIS_DB = 3
 
 # 全局redis客户端对象
 redis_client = None

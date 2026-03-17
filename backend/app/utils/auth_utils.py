@@ -6,6 +6,9 @@ from jose import JWTError, jwt
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
+from app.core.failed_response import logger
+from app.db.redis_config import connect_redis
+
 load_dotenv()
 
 # Django JWT配置
@@ -53,6 +56,27 @@ async def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depend
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # 检查JWT是否在黑名单中
+    jti = payload.get("jti")
+    logger.info(f"【debug】 检查JWT是否在黑名单中，jti: {jti}", extra={"path": "auth_utils.get_current_user_id"})
+    if jti:
+        redis_client = await connect_redis()
+        # 使用通配符查询所有可能的黑名单键格式
+        # 匹配任何前缀的blacklist键，如:1:blacklist:{jti}、blacklist:{jti}等
+        wildcard_pattern = f"*blacklist:{jti}"
+        
+        # 获取所有匹配的键
+        matching_keys = await redis_client.keys(wildcard_pattern)
+        logger.info(f"【debug】 检查JWT是否在黑名单中，匹配的键: {matching_keys}", extra={"path": "auth_utils.get_current_user_id"})
+        
+        # 如果有匹配的键，说明JWT在黑名单中
+        if matching_keys:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has been revoked",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
     # 从Django JWT中提取user_id（uuid）
     user_id: str = payload.get("user_id")
