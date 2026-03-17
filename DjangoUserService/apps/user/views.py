@@ -1,63 +1,382 @@
-import logging
+"""
+视图模块：
+    - LoginView(post): 类视图，用于用户登录，验证用户登录信息，并调用jwt生成器生成token
 
-from django.contrib.auth import get_user_model
-from rest_framework import generics, status
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework_simplejwt.views import TokenObtainPairView
+    - ResetPasswordView(post): 类视图，继承自AuthenticatedView父类用于身份验证，重置用户密码
 
-from .serializers import (
-    UserRegistrationSerializer,
-    UserInfoSerializer,
-    MyTokenObtainPairSerializer
-)
-from ..utils.response import success_response
+    - TokenRefreshView(post): 类视图，返回刷新后的token
 
-# 获取当前模块的日志记录器
-logger = logging.getLogger(__name__)
+    - UserDetailView(get): 类视图，返回序列化后的当前用户信息
 
-User = get_user_model()
+"""
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.views import APIView
+from .serializers import LoginSerializer, UserSerializer, ResetPasswordSerializer, RegisterSerializer, UserUpdateSerializer
+from datetime import datetime
+from .authentications import JWTAuthentication, JWTTokenGenerator
+from rest_framework.response import Response
+from rest_framework import status
+from .fatherClass import AuthenticatedView
+from .models import OfficeUser
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
-class UserRegistrationView(generics.CreateAPIView):
-    """注册接口"""
-    queryset = User.objects.all()
-    permission_classes = (AllowAny,)
-    serializer_class = UserRegistrationSerializer
+# Create your views here.
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
+authentication = JWTAuthentication()
+jwttoken = JWTTokenGenerator()
 
-        # 记录注册日志
-        logger.info(f"User {user.user_name} registered successfully")
 
-        # 注册成功后，自动返回用户信息
-        return success_response(
-            message="注册成功",
-            data={
-                "user": UserInfoSerializer(user, context=self.get_serializer_context()).data
+class LoginView(APIView):
+    """类视图，处理用户登录"""
+    @swagger_auto_schema(
+        request_body=LoginSerializer,
+        responses={
+            200: openapi.Response(
+                description="登录成功",
+                examples={
+                    "application/json": {
+                        "message": "用户名 登录成功",
+                        "user": {
+                            "uuid": "uuid",
+                            "username": "用户名",
+                            "email": "email@example.com",
+                            "telephone": "13800138000",
+                            "is_active": True,
+                            "status": 1,
+                            "date_joined": "2026-03-17T13:45:18Z"
+                        },
+                        "token": "jwt_token"
+                    }
+                }
+            ),
+            400: openapi.Response(
+                description="登录失败",
+                examples={
+                    "application/json": {
+                        "detail": {
+                            "non_field_errors": ["用户名或邮箱不存在", "密码错误", "用户状态异常，请检查是否激活或已被锁定"]
+                        }
+                    }
+                }
+            )
+        }
+    )
+    def post(self, request) -> Response:
+        """
+        处理post请求，验证用户登录
+        :param request: post请求，包含用户登录信息
+        :return: Response对象，包含登录成功信息，用户对象和token
+        """
+        serializer = LoginSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.validated_data.get('user')  # 从序列化器中获取用户对象
+            user.last_login = datetime.now()  # 更新用户最后登录时间
+            user.save()  # 保存用户对象
+            # 生成JWT token - 正确处理返回的元组
+            token, expire_time = jwttoken.generate_token(user)
+            return Response({"message": f"{user.username} 登录成功", "user": UserSerializer(user).data, "token": token}, status=status.HTTP_200_OK)
+        else:
+            return Response({"detail": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class RegisterView(APIView):
+    """类视图，处理用户注册"""
+    @swagger_auto_schema(
+        request_body=RegisterSerializer,
+        responses={
+            201: openapi.Response(
+                description="注册成功",
+                examples={
+                    "application/json": {
+                        "message": "用户名 注册成功",
+                        "user": {
+                            "uuid": "uuid",
+                            "username": "用户名",
+                            "email": "email@example.com",
+                            "telephone": "13800138000",
+                            "is_active": True,
+                            "status": 1,
+                            "date_joined": "2026-03-17T13:45:18Z"
+                        },
+                        "token": "jwt_token"
+                    }
+                }
+            ),
+            400: openapi.Response(
+                description="注册失败",
+                examples={
+                    "application/json": {
+                        "detail": {
+                            "email": ["该邮箱已被注册"],
+                            "telephone": ["该电话号码已被注册"],
+                            "confirm_password": ["密码和确认密码不一致"]
+                        }
+                    }
+                }
+            )
+        }
+    )
+    def post(self, request) -> Response:
+        """
+        处理post请求，用户注册
+        :param request: post请求，包含用户注册信息
+        :return: Response对象，包含注册成功信息，用户对象和token
+        """
+        serializer = RegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()  # 调用序列化器的create方法创建用户
+            # 生成JWT token
+            token, expire_time = jwttoken.generate_token(user)
+            return Response({"message": f"{user.username} 注册成功", "user": UserSerializer(user).data, "token": token}, status=status.HTTP_201_CREATED)
+        else:
+            return Response({"detail": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ResetPasswordView(AuthenticatedView):
+    """类视图，处理用户重置密码"""
+    @swagger_auto_schema(
+        request_body=ResetPasswordSerializer,
+        responses={
+            200: openapi.Response(
+                description="密码重置成功",
+                examples={
+                    "application/json": {
+                        "message": "密码重置成功"
+                    }
+                }
+            ),
+            400: openapi.Response(
+                description="密码重置失败",
+                examples={
+                    "application/json": {
+                        "detail": {
+                            "non_field_errors": ["请检查旧密码是否正确", "新密码不能和旧密码相同", "新密码和确认密码不一致"]
+                        }
+                    }
+                }
+            ),
+            401: openapi.Response(
+                description="未授权",
+                examples={
+                    "application/json": {
+                        "detail": "认证失败"
+                    }
+                }
+            )
+        }
+    )
+    def post(self, request) -> Response:
+        """
+        处理post请求，重置用户密码
+        :param request: old_password, new_password, confirm_password
+        :return: Response对象，包含重置密码成功或失败的信息
+        """
+
+        serializer = ResetPasswordSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            # 获取旧token并添加到黑名单
+            auth_header = request.headers.get('Authorization')
+            if auth_header:
+                try:
+                    auth_type, token = auth_header.split(' ', 1)
+                    if auth_type.lower() == 'bearer':
+                        jwttoken.blacklist_token(token)
+                except ValueError:
+                    pass
+            
+            user = serializer.validated_data.get('user')  # 从序列化器中获取用户对象
+            user.set_password(serializer.validated_data.get('new_password'))  # 设置新密码
+            user.save()  # 保存用户对象
+            # 生成新token
+            new_token, expire_time = jwttoken.generate_token(user)
+            return Response({
+                "message": "密码重置成功",
+                "token": new_token
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({"detail": serializer.errors},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+
+class TokenRefreshView(APIView):
+    """处理Token刷新请求"""
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'token': openapi.Schema(type=openapi.TYPE_STRING, description='旧Token')
             },
-            status=status.HTTP_201_CREATED
-        )
+            required=['token']
+        ),
+        responses={
+            200: openapi.Response(
+                description="Token刷新成功",
+                examples={
+                    "application/json": {
+                        "message": "Token刷新成功",
+                        "token": "new_jwt_token",
+                        "expire_time": 1715999118
+                    }
+                }
+            ),
+            400: openapi.Response(
+                description="Token刷新失败",
+                examples={
+                    "application/json": {
+                        "detail": "Token不能为空",
+                        "detail": "Token刷新失败"
+                    }
+                }
+            ),
+            401: openapi.Response(
+                description="Token无效",
+                examples={
+                    "application/json": {
+                        "detail": "Token已过期，请重新登录",
+                        "detail": "无效的Token签名",
+                        "detail": "无法解码Token",
+                        "detail": "无效的Token"
+                    }
+                }
+            )
+        }
+    )
+    def post(self, request) -> Response:
+        """
+        处理post请求，刷新用户Token
+        :param request: post请求，包含旧Token
+        :return: Response对象，包含新Token和过期时间
+        """
+        token = request.data.get('token')
+        if not token:
+            return Response({
+                "detail": "Token不能为空"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            new_token, expire_time = jwttoken.refresh_token(token)
+            # 将旧token添加到黑名单
+            jwttoken.blacklist_token(token)
+            return Response({
+                "message": "Token刷新成功",
+                "token": new_token,
+                "expire_time": expire_time
+            }, status=status.HTTP_200_OK)
+        except AuthenticationFailed as e:
+            return Response({
+                "detail": str(e)
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        except Exception as e:
+            return Response({
+                "detail": "Token刷新失败"
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-class MyTokenObtainPairView(TokenObtainPairView):
-    """
-    登录接口：获取 Token
-    返回: refresh, access
-    refresh: 刷新 Token，续期access
-    access: 访问 Token，用于调用需要认证的接口
-    """
-    logger.info("TokenObtainPairView requested")
-    serializer_class = MyTokenObtainPairSerializer
 
-class UserProfileView(generics.RetrieveAPIView):
-    """
-    获取当前登录用户信息
-    供 FastAPI 服务内部调用
-    """
-    permission_classes = (IsAuthenticated,)
-    serializer_class = UserInfoSerializer
-    logger.info("UserProfileView requested")
+class UserDetailView(AuthenticatedView):
+    """获取当前登录用户详情"""
+    @swagger_auto_schema(
+        responses={
+            200: openapi.Response(
+                description="获取用户详情成功",
+                examples={
+                    "application/json": {
+                        "message": "获取用户详情成功",
+                        "user": {
+                            "uuid": "uuid",
+                            "username": "用户名",
+                            "email": "email@example.com",
+                            "telephone": "13800138000",
+                            "is_active": True,
+                            "status": 1,
+                            "date_joined": "2026-03-17T13:45:18Z"
+                        }
+                    }
+                }
+            ),
+            401: openapi.Response(
+                description="未授权",
+                examples={
+                    "application/json": {
+                        "detail": "认证失败"
+                    }
+                }
+            )
+        }
+    )
+    def get(self, request) -> Response:
+        """
+        处理get请求，获取当前登录用户详情
+        :param request: get请求
+        :return: Response对象，包含用户详情
+        """
+        serializer = UserSerializer(request.user)
+        return Response({"message": "获取用户详情成功", "user": serializer.data}, status=status.HTTP_200_OK)
 
-    def get_object(self):
-        return self.request.user
+
+class UserUpdateView(AuthenticatedView):
+    """更新当前登录用户信息"""
+    @swagger_auto_schema(
+        request_body=UserUpdateSerializer,
+        responses={
+            200: openapi.Response(
+                description="用户信息更新成功",
+                examples={
+                    "application/json": {
+                        "message": "用户信息更新成功",
+                        "user": {
+                            "uuid": "uuid",
+                            "username": "用户名",
+                            "email": "email@example.com",
+                            "telephone": "13800138000",
+                            "is_active": True,
+                            "status": 1,
+                            "date_joined": "2026-03-17T13:45:18Z"
+                        }
+                    }
+                }
+            ),
+            400: openapi.Response(
+                description="用户信息更新失败",
+                examples={
+                    "application/json": {
+                        "detail": {
+                            "telephone": ["该电话号码已被注册"]
+                        }
+                    }
+                }
+            ),
+            401: openapi.Response(
+                description="未授权",
+                examples={
+                    "application/json": {
+                        "detail": "认证失败"
+                    }
+                }
+            )
+        }
+    )
+    def put(self, request) -> Response:
+        """
+        处理put请求，更新当前登录用户信息
+        :param request: put请求，包含用户更新信息
+        :return: Response对象，包含更新成功信息和更新后的用户对象
+        """
+        serializer = UserUpdateSerializer(data=request.data, instance=request.user, context={'request': request})
+        if serializer.is_valid():
+            # 获取旧token并添加到黑名单
+            auth_header = request.headers.get('Authorization')
+            if auth_header:
+                try:
+                    auth_type, token = auth_header.split(' ', 1)
+                    if auth_type.lower() == 'bearer':
+                        jwttoken.blacklist_token(token)
+                except ValueError:
+                    pass
+            
+            user = serializer.save()  # 调用序列化器的update方法更新用户
+            # 生成新token
+            new_token, expire_time = jwttoken.generate_token(user)
+            return Response({"message": "用户信息更新成功", "user": UserSerializer(user).data, "token": new_token}, status=status.HTTP_200_OK)
+        else:
+            return Response({"detail": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)

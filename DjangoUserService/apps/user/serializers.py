@@ -1,49 +1,155 @@
+"""
+序列化模块：
+    - LoginSerializer： 登录序列化器，对用户输入的登录信息进行验证
+        - validate： 验证用户名或邮箱是否存在，密码是否正确，用户状态是否为激活，最后返回dict
+
+    - UserSerializer： 用户序列化器， 序列化用户信息
+        - Meta: 序列化用户模型并返回，使用嵌套序列化器DepartmentSerializer使返回的部门信息更详细
+
+"""
+
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from .models import OfficeUser, UserStatusChoice
+from django.db.models import Q
 
-User = get_user_model()
+class LoginSerializer(serializers.Serializer):
+    """登录序列化器"""
+    username = serializers.CharField(required=False, allow_blank=True, help_text="用户名")
+    email = serializers.EmailField(required=False, help_text="邮箱")
+    password = serializers.CharField(max_length=20, min_length=6, required=True, help_text="密码")
 
-class UserRegistrationSerializer(serializers.ModelSerializer):
-    """用户注册序列化器"""
-    password = serializers.CharField(write_only=True, required=True, min_length=6)
-    password2 = serializers.CharField(write_only=True, required=True)
+    def validate(self, attrs) -> dict:
+        """验证用户名或邮箱是否存在，密码是否正确，用户状态是否为激活"""
+        username = attrs.get('username')
+        email = attrs.get('email')
+        password = attrs.get('password')
 
-    class Meta:
-        model = User
-        fields = ('user_name', 'email', 'password', 'password2', 'phone')
+        # 验证用户名或邮箱至少提供一个
+        if not username and not email:
+            raise serializers.ValidationError("用户名或邮箱至少提供一个")
 
-    def validate(self, attrs):
-        if attrs['password'] != attrs['password2']:
-            raise serializers.ValidationError({"password": "两次密码不一致"})
+        # 验证用户名或邮箱是否存在
+        user_query = OfficeUser.objects.filter(Q(username=username) | Q(email=email)) if username and email else \
+                    OfficeUser.objects.filter(username=username) if username else \
+                    OfficeUser.objects.filter(email=email)
+                     
+        if not user_query.exists():
+            raise serializers.ValidationError("用户名或邮箱不存在")
+
+        # 获取用户对象
+        user = user_query.first()
+        
+        # 验证密码是否正确
+        if not user.check_password(password):
+            raise serializers.ValidationError("密码错误")
+
+        # 验证用户状态是否为激活
+        if user.status != UserStatusChoice.ACTIVE:
+            raise serializers.ValidationError("用户状态异常，请检查是否激活或已被锁定")
+
+        # 将用户对象添加到验证数据中，便于视图使用，减少SQL语句的查询次数
+        attrs['user'] = user
         return attrs
 
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """用户序列化器"""
+
+    class Meta:
+        model = OfficeUser
+        exclude = ('password',)
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    """重置密码序列化器"""
+    old_password = serializers.CharField(max_length=20, min_length=6, required=True, help_text="旧密码")
+    new_password = serializers.CharField(max_length=20, min_length=6, required=True, help_text="新密码")
+    confirm_password = serializers.CharField(max_length=20, min_length=6, required=True, help_text="确认密码")
+
+    def validate(self, attrs) -> dict:
+        """验证新密码和确认密码是否一致"""
+        old_password = attrs.get('old_password')
+        new_password = attrs.get('new_password')
+        confirm_password = attrs.get('confirm_password')
+        # 验证旧密码是否正确
+        user = self.context['request'].user
+        if not user.check_password(old_password):
+            raise serializers.ValidationError("请检查旧密码是否正确")
+
+        # 新密码不能和旧密码相同
+        if new_password == old_password:
+            raise serializers.ValidationError("新密码不能和旧密码相同")
+
+        if new_password != confirm_password:
+            raise serializers.ValidationError("新密码和确认密码不一致")
+        
+        # 将user添加到验证数据中，以便视图使用
+        attrs['user'] = user
+        return attrs
+
+class RegisterSerializer(serializers.ModelSerializer):
+    """用户注册序列化器"""
+    password = serializers.CharField(max_length=20, min_length=6, required=True, help_text="密码", write_only=True)
+    confirm_password = serializers.CharField(max_length=20, min_length=6, required=True, help_text="确认密码", write_only=True)
+    
+    class Meta:
+        model = OfficeUser
+        fields = ('username', 'email', 'telephone', 'password', 'confirm_password')
+    
+    def validate(self, attrs):
+        """验证注册信息"""
+        email = attrs.get('email')
+        telephone = attrs.get('telephone')
+        password = attrs.get('password')
+        confirm_password = attrs.get('confirm_password')
+        
+        # 验证邮箱是否已存在
+        if OfficeUser.objects.filter(email=email).exists():
+            raise serializers.ValidationError({'email': '该邮箱已被注册'})
+        
+        # 验证电话号码是否已存在
+        if telephone and OfficeUser.objects.filter(telephone=telephone).exists():
+            raise serializers.ValidationError({'telephone': '该电话号码已被注册'})
+        
+        # 验证密码和确认密码是否一致
+        if password != confirm_password:
+            raise serializers.ValidationError({'confirm_password': '密码和确认密码不一致'})
+        
+        return attrs
+    
     def create(self, validated_data):
-        validated_data.pop('password2')
-        # 确保提供 username 字段，使用 user_name 或 email 作为 username
-        if 'username' not in validated_data:
-            validated_data['username'] = validated_data.get('user_name', validated_data.get('email', ''))
-        user = User.objects.create_user(**validated_data)
+        """创建新用户"""
+        # 移除确认密码字段
+        validated_data.pop('confirm_password')
+        # 创建用户并设置密码
+        user = OfficeUser.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data['email'],
+            password=validated_data['password'],
+            telephone=validated_data.get('telephone'),
+            status=UserStatusChoice.ACTIVE  # 注册后直接激活
+        )
         return user
 
-class UserInfoSerializer(serializers.ModelSerializer):
-    """返回给前端或 FastAPI 侧的用户信息"""
-    # 显式指定 user_id 为 uuid
-    user_id = serializers.CharField(source='uuid', read_only=True)
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    """用户信息更新序列化器"""
     class Meta:
-        model = User
-        fields = ('user_id', 'user_name', 'email', 'avatar', 'date_joined')
-
-class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """
-    自定义 JWT 返回内容
-    可以在这里添加 FastAPI 可能需要的额外信息
-    """
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-
-        # 往 Token 里加一些自定义的公开信息
-        token['user_name'] = user.user_name
-        token['user_id'] = str(user.uuid)
-        return token
+        model = OfficeUser
+        fields = ('username', 'telephone')
+    
+    def validate(self, attrs):
+        """验证更新信息"""
+        telephone = attrs.get('telephone')
+        user = self.context['request'].user
+        
+        # 验证电话号码是否已被其他用户使用
+        if telephone and OfficeUser.objects.filter(telephone=telephone).exclude(uuid=user.uuid).exists():
+            raise serializers.ValidationError({'telephone': '该电话号码已被注册'})
+        
+        return attrs
+    
+    def update(self, instance, validated_data):
+        """更新用户信息"""
+        return super().update(instance, validated_data)

@@ -1,52 +1,96 @@
-import uuid
+from django.contrib.auth.hashers import make_password
+from django.contrib.auth.models import (
+    AbstractBaseUser, BaseUserManager
+)
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from shortuuidfield import ShortUUIDField
 
-class User(AbstractUser):
+class UserStatusChoice(models.IntegerChoices):
     """
-    自定义用户模型
-    核心联调字段：uuid (作为对外的唯一用户ID)
+    用户状态选择
     """
-    uuid = models.UUIDField(
-        default=uuid.uuid4,
-        editable=False,
-        unique=True,
-        db_index=True,
-        verbose_name="全局用户ID"
-    )
+    LOCKED = 2, "已锁定"
+    ACTIVE = 1, "已激活"
+    DISABLED = 0, "未激活"
 
-    user_name = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True,
-        verbose_name="用户名"
-    )
+class OfficeUserManager(BaseUserManager):
+    use_in_migrations = True
 
-    # 扩展字段：手机号
-    phone = models.CharField(
-        max_length=11,
-        unique=True,
-        null=True,
-        blank=True,
-        verbose_name="手机号"
-    )
+    def _create_user_object(self, username, email, password, **extra_fields):
+        """
+        创建并返回一个新的用户对象，而不保存到数据库中。
+        """
+        if not username:
+            raise ValueError("用户名不能为空")
 
-    # 扩展字段：头像
-    avatar = models.ImageField(
-        upload_to='avatars/%Y/%m/%d/',
-        null=True,
-        blank=True,
-        verbose_name="头像"
-    )
+        email = self.normalize_email(email)
+        user = self.model(username=username, email=email, **extra_fields)
+        user.password = make_password(password)
+        return user
 
-    # 审计字段
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="注册时间")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+    def _create_user(self, username, email, password, **extra_fields):
+        """
+        创建并保存一个普通用户，使用提供的用户名、电子邮件和密码。
+        """
+        user = self._create_user_object(username, email, password, **extra_fields)
+        user.save(using=self._db)
+        return user
+
+    async def _acreate_user(self, username, email, password, **extra_fields):
+        """
+        异步创建并保存一个普通用户，使用提供的用户名、电子邮件和密码。
+        """
+        user = self._create_user_object(username, email, password, **extra_fields)
+        await user.asave(using=self._db)
+        return user
+
+    def create_user(self, username, email=None, password=None, **extra_fields):
+        return self._create_user(username, email, password, **extra_fields)
+
+    create_user.alters_data = True
+
+    async def acreate_user(self, username, email=None, password=None, **extra_fields):
+        return await self._acreate_user(username, email, password, **extra_fields)
+
+    acreate_user.alters_data = True
+
+class OfficeUser(AbstractBaseUser):
+    """
+    自定义用户模型，继承自AbstractBaseUser
+    """
+    uuid = ShortUUIDField(primary_key=True, unique=True, editable=False)
+    username = models.CharField(
+        max_length=150,
+        unique=False,
+    )
+    email = models.EmailField(unique=True, blank=False)
+    telephone = models.CharField(max_length=11, unique=True,null=True, blank=False)
+    is_active = models.BooleanField(default=False)
+    # 用户状态， 只需要关注status字段
+    status = models.IntegerField(
+        choices=UserStatusChoice,
+        default=UserStatusChoice.DISABLED
+    )
+    date_joined = models.DateTimeField(auto_now_add=True)
+
+    # 确保管理器引用正确
+    objects = OfficeUserManager()
+
+    EMAIL_FIELD = "email"
+    # 这里的USERNAME_FIELD是用来鉴权的，在authenticate方法中会使用到
+    USERNAME_FIELD = "email"
+    # 这里的REQUIRED_FIELDS是用来创建用户时必填的字段，在create_user方法中会使用到
+    REQUIRED_FIELDS = ["username", "password"]
+
+    def clean(self):
+        super().clean()
+        self.email = self.__class__.objects.normalize_email(self.email)
+
+    def get_full_name(self):
+        return self.username
+
+    def get_short_name(self):
+        return self.username
 
     class Meta:
-        db_table = 'auth_users'
-        verbose_name = "用户"
-        verbose_name_plural = "用户"
-
-    def __str__(self):
-        return f"{self.user_name} ({self.uuid})"
+        db_table = 'officeAuth_officeuser'
