@@ -22,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-zdhqx2xbs&fd)&s-#&7mu%t%9l#fp8#6)zgvgkl+nu$w+ga6nl'
+SECRET_KEY = 'MY_JWT_SECRET_KWY_FOR_USR_AND_I_JUST_WRITE_THIS'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -87,15 +87,6 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
-# 邮箱配置
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.qq.com'
-EMAIL_USE_TLS = True
-EMAIL_PORT = 587
-EMAIL_HOST_USER = '1765413309@qq.com'
-EMAIL_HOST_PASSWORD = 'towdlwmsfbaydggj' 
-DEFAULT_FROM_EMAIL = '1765413309@qq.com'
 
 # Celery 配置
 CELERY_BROKER_URL = 'redis://127.0.0.1:6379/1'
