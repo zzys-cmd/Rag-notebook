@@ -13,7 +13,7 @@ class UserStatusChoice(models.IntegerChoices):
     ACTIVE = 1, "已激活"
     DISABLED = 0, "未激活"
 
-class OfficeUserManager(BaseUserManager):
+class UserManager(BaseUserManager):
     use_in_migrations = True
 
     def _create_user_object(self, username, email, password, **extra_fields):
@@ -54,7 +54,7 @@ class OfficeUserManager(BaseUserManager):
 
     acreate_user.alters_data = True
 
-class OfficeUser(AbstractBaseUser):
+class User(AbstractBaseUser):
     """
     自定义用户模型，继承自AbstractBaseUser
     """
@@ -72,9 +72,11 @@ class OfficeUser(AbstractBaseUser):
         default=UserStatusChoice.DISABLED
     )
     date_joined = models.DateTimeField(auto_now_add=True)
+    last_login = models.DateTimeField(null=True, blank=True)
+    avatar = models.CharField(max_length=255, null=True, blank=True)
 
     # 确保管理器引用正确
-    objects = OfficeUserManager()
+    objects = UserManager()
 
     EMAIL_FIELD = "email"
     # 这里的USERNAME_FIELD是用来鉴权的，在authenticate方法中会使用到

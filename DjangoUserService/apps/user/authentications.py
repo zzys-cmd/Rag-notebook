@@ -17,7 +17,7 @@ from django.conf import settings
 from django.core.cache import cache
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
-from .models import OfficeUser, UserStatusChoice
+from .models import User, UserStatusChoice
 
 # 从jwt模块导入异常类
 ExpiredSignatureError = jwt.ExpiredSignatureError
@@ -25,7 +25,7 @@ InvalidTokenError = getattr(jwt, 'InvalidTokenError', Exception)
 
 class JWTAuthentication(BaseAuthentication):
     """JWT认证类，用于验证用户Token"""
-    def authenticate(self, request) -> tuple[OfficeUser, str]:
+    def authenticate(self, request) -> tuple[User, str] | None:
         """
         从请求头中获取JWT Token并验证
         :param request: 请求对象
@@ -74,8 +74,8 @@ class JWTAuthentication(BaseAuthentication):
         # 获取用户对象 - 使用正确的字段名
         try:
             # OfficeUser使用uuid作为主键
-            user = OfficeUser.objects.get(uuid=user_id)
-        except OfficeUser.DoesNotExist:
+            user = User.objects.get(uuid=user_id)
+        except User.DoesNotExist:
             raise AuthenticationFailed('用户不存在')
         
         # 验证用户状态是否为激活
@@ -146,7 +146,7 @@ class JWTTokenGenerator:
             if not user_id:
                 raise ValueError('无效的Token')
             
-            user = OfficeUser.objects.get(uuid=user_id)  # 修复为uuid
+            user = User.objects.get(uuid=user_id)  # 修复为uuid
             return JWTTokenGenerator.generate_token(user)
             
         except Exception:

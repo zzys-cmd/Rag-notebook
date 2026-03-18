@@ -175,7 +175,7 @@ MEDIA_URL = '/media/'
 CORS_ALLOW_ALL_ORIGINS = True
 
 # 覆盖默认的用户模型
-AUTH_USER_MODEL = 'user.officeuser'
+AUTH_USER_MODEL = 'user.User'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -191,4 +191,3 @@ REST_FRAMEWORK = {
 }
 
 APPEND_SLASH = True
-

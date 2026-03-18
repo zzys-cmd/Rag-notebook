@@ -9,7 +9,7 @@
 """
 
 from rest_framework import serializers
-from .models import OfficeUser, UserStatusChoice
+from .models import User, UserStatusChoice
 from django.db.models import Q
 
 class LoginSerializer(serializers.Serializer):
@@ -29,9 +29,9 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("用户名或邮箱至少提供一个")
 
         # 验证用户名或邮箱是否存在
-        user_query = OfficeUser.objects.filter(Q(username=username) | Q(email=email)) if username and email else \
-                    OfficeUser.objects.filter(username=username) if username else \
-                    OfficeUser.objects.filter(email=email)
+        user_query = User.objects.filter(Q(username=username) | Q(email=email)) if username and email else \
+                    User.objects.filter(username=username) if username else \
+                    User.objects.filter(email=email)
                      
         if not user_query.exists():
             raise serializers.ValidationError("用户名或邮箱不存在")
@@ -57,7 +57,7 @@ class UserSerializer(serializers.ModelSerializer):
     """用户序列化器"""
 
     class Meta:
-        model = OfficeUser
+        model = User
         exclude = ('password',)
 
 
@@ -94,7 +94,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     confirm_password = serializers.CharField(max_length=20, min_length=6, required=True, help_text="确认密码", write_only=True)
     
     class Meta:
-        model = OfficeUser
+        model = User
         fields = ('username', 'email', 'telephone', 'password', 'confirm_password')
     
     def validate(self, attrs):
@@ -105,11 +105,11 @@ class RegisterSerializer(serializers.ModelSerializer):
         confirm_password = attrs.get('confirm_password')
         
         # 验证邮箱是否已存在
-        if OfficeUser.objects.filter(email=email).exists():
+        if User.objects.filter(email=email).exists():
             raise serializers.ValidationError({'email': '该邮箱已被注册'})
         
         # 验证电话号码是否已存在
-        if telephone and OfficeUser.objects.filter(telephone=telephone).exists():
+        if telephone and User.objects.filter(telephone=telephone).exists():
             raise serializers.ValidationError({'telephone': '该电话号码已被注册'})
         
         # 验证密码和确认密码是否一致
@@ -123,7 +123,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         # 移除确认密码字段
         validated_data.pop('confirm_password')
         # 创建用户并设置密码
-        user = OfficeUser.objects.create_user(
+        user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password'],
@@ -136,7 +136,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserUpdateSerializer(serializers.ModelSerializer):
     """用户信息更新序列化器"""
     class Meta:
-        model = OfficeUser
+        model = User
         fields = ('username', 'telephone')
     
     def validate(self, attrs):
@@ -145,7 +145,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         
         # 验证电话号码是否已被其他用户使用
-        if telephone and OfficeUser.objects.filter(telephone=telephone).exclude(uuid=user.uuid).exists():
+        if telephone and User.objects.filter(telephone=telephone).exclude(uuid=user.uuid).exists():
             raise serializers.ValidationError({'telephone': '该电话号码已被注册'})
         
         return attrs

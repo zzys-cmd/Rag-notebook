@@ -11,15 +11,18 @@
 """
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.views import APIView
+
+from .models import User
 from .serializers import LoginSerializer, UserSerializer, ResetPasswordSerializer, RegisterSerializer, UserUpdateSerializer
 from datetime import datetime
 from .authentications import JWTAuthentication, JWTTokenGenerator
 from rest_framework.response import Response
 from rest_framework import status
 from .fatherClass import AuthenticatedView
-from .models import OfficeUser
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+
+from ..utils.cache_utils import cache_user_info, clear_user_cache
 
 # Create your views here.
 
@@ -188,6 +191,8 @@ class ResetPasswordView(AuthenticatedView):
             user = serializer.validated_data.get('user')  # 从序列化器中获取用户对象
             user.set_password(serializer.validated_data.get('new_password'))  # 设置新密码
             user.save()  # 保存用户对象
+            # 清除用户缓存
+            clear_user_cache(user.uuid)
             # 生成新token
             new_token, expire_time = jwttoken.generate_token(user)
             return Response({
@@ -224,7 +229,6 @@ class TokenRefreshView(APIView):
                 description="Token刷新失败",
                 examples={
                     "application/json": {
-                        "detail": "Token不能为空",
                         "detail": "Token刷新失败"
                     }
                 }
@@ -233,10 +237,7 @@ class TokenRefreshView(APIView):
                 description="Token无效",
                 examples={
                     "application/json": {
-                        "detail": "Token已过期，请重新登录",
-                        "detail": "无效的Token签名",
-                        "detail": "无法解码Token",
-                        "detail": "无效的Token"
+                        "detail": "Token已过期，请重新登录"
                     }
                 }
             )
@@ -271,6 +272,18 @@ class TokenRefreshView(APIView):
             return Response({
                 "detail": "Token刷新失败"
             }, status=status.HTTP_400_BAD_REQUEST)
+
+@cache_user_info()
+def get_user_info(user):
+    serializer = UserSerializer(user)
+    return {
+        "id": serializer.data.get('uuid'),
+        "username": serializer.data.get('username'),
+        "email": serializer.data.get('email'),
+        "avatar": serializer.data.get('avatar'),
+        "create_time": serializer.data.get('date_joined'),
+        "last_login": serializer.data.get('last_login'),
+    }
 
 
 class UserDetailView(AuthenticatedView):
@@ -310,8 +323,8 @@ class UserDetailView(AuthenticatedView):
         :param request: get请求
         :return: Response对象，包含用户详情
         """
-        serializer = UserSerializer(request.user)
-        return Response({"message": "获取用户详情成功", "user": serializer.data}, status=status.HTTP_200_OK)
+        user_info = get_user_info(request.user)
+        return Response({"message": "获取用户详情成功", "user": user_info}, status=status.HTTP_200_OK)
 
 
 class UserUpdateView(AuthenticatedView):
@@ -375,8 +388,51 @@ class UserUpdateView(AuthenticatedView):
                     pass
             
             user = serializer.save()  # 调用序列化器的update方法更新用户
+            # 清除用户缓存
+            clear_user_cache(user.uuid)
             # 生成新token
             new_token, expire_time = jwttoken.generate_token(user)
             return Response({"message": "用户信息更新成功", "user": UserSerializer(user).data, "token": new_token}, status=status.HTTP_200_OK)
         else:
             return Response({"detail": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserLogOutView(APIView):
+    """用户注销"""
+    @swagger_auto_schema(
+        responses={
+            200: openapi.Response(
+                description="用户注销成功",
+                examples={
+                    "application/json": {
+                        "message": "用户注销成功"
+                    }
+                }
+            ),
+            401: openapi.Response(
+                description="未授权",
+                examples={
+                    "application/json": {
+                        "detail": "认证失败"
+                    }
+                }
+            )
+        }
+    )
+    def post(self, request) -> Response:
+        """
+        处理post请求，用户注销
+        :param request: post请求
+        :return: Response对象，包含注销成功信息
+        """
+        # 获取旧token并添加到黑名单
+        auth_header = request.headers.get('Authorization')
+        if auth_header:
+            try:
+                auth_type, token = auth_header.split(' ', 1)
+                if auth_type.lower() == 'bearer':
+                    jwttoken.blacklist_token(token)
+            except ValueError:
+                pass
+
+        return Response({"message": "用户注销成功"}, status=status.HTTP_200_OK)
