@@ -12,7 +12,6 @@
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.views import APIView
 
-from .models import User
 from .serializers import LoginSerializer, UserSerializer, ResetPasswordSerializer, RegisterSerializer, UserUpdateSerializer
 from datetime import datetime
 from .authentications import JWTAuthentication, JWTTokenGenerator
@@ -23,6 +22,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 from ..utils.cache_utils import cache_user_info, clear_user_cache
+from ..utils.rate_limit_utils import rate_limit
 
 # Create your views here.
 
@@ -120,6 +120,7 @@ class RegisterView(APIView):
             )
         }
     )
+    @rate_limit(limit=1, window=60)
     def post(self, request) -> Response:
         """
         处理post请求，用户注册
