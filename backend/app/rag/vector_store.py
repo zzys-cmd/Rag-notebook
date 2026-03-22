@@ -13,7 +13,7 @@ from aiofiles import os as aio_os
 
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from app.rag.text_spliter import AsyncTextSplitter
 from langchain_community.retrievers import BM25Retriever
 
 from app.utils.config import chroma_config
@@ -32,10 +32,11 @@ class VectorStoreService:
             embedding_function=embed_model,
             persist_directory=persist_dir,
         )
-        self.spliter = RecursiveCharacterTextSplitter(
+        self.spliter = AsyncTextSplitter(
             chunk_size=chroma_config['chunk_size'],
             chunk_overlap=chroma_config['chunk_overlap'],
             separators=chroma_config['separators'],
+            embedding_model=embed_model
         )
 
     async def get_bm25_retriever(self):
@@ -54,7 +55,7 @@ class VectorStoreService:
         for file_path in file_paths:
             documents = await self.get_file_document(file_path)
             if documents:
-                split_docs = self.spliter.split_documents(documents)
+                split_docs = await self.spliter.split_documents(documents)
                 all_docs.extend(split_docs)
         
         # 创建BM25检索器
@@ -211,8 +212,8 @@ class VectorStoreService:
                             pass
                     continue
 
-                # 4. 切分文档 (同步执行，因为是CPU密集操作，没必要异步)
-                document: list[Document] = self.spliter.split_documents(document)
+                # 4. 切分文档
+                document: list[Document] = await self.spliter.split_documents(document)
                 if not document:
                     logger.error(f"【向量数据库】文件 {file_path} 切分内容为空，跳过")
                     # 如果是临时文件，删除
