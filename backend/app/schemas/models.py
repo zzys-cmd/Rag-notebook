@@ -37,3 +37,14 @@ class AgentResponse(BaseModel):
 class RAGResponse(BaseModel):
     """RAG检索响应模型"""
     response: str
+
+
+class ReorderRequest(BaseModel):
+    """重排序请求模型"""
+    query: str
+    documents: List[str]
+
+
+class ReorderResponse(BaseModel):
+    """重排序响应模型"""
+    documents: List[dict]
