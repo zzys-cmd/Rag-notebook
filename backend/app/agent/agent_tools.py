@@ -9,22 +9,22 @@ from app.utils.auth_utils import decode_django_jwt
 
 import datetime
 
-@tool(description="用于从向量数据库里检索文档并生成摘要，返回包含文档列表和摘要的结果。在获取到结果后，你需要调用`reorder_documents_tools`工具对文档进行重排序")
+@tool(description="用于从向量数据库里检索文档并生成摘要。返回格式为：'摘要: [摘要内容]\\n\\n检索到的文档列表:\\n1. [文档1内容]\\n2. [文档2内容]\\n...'。获取结果后，必须提取文档列表并使用`reorder_documents_tools`工具进行重排序")
 async def rag_summary_tools(query: str) -> str:
     """RAG 摘要工具"""
     result = await RagService().get_documents_and_summary(query)
     documents = result.get("documents", [])
     summary = result.get("summary", "")
-    
+
     # 格式化返回结果
     formatted_result = f"摘要: {summary}\n\n"
     formatted_result += "检索到的文档列表:\n"
     for i, doc in enumerate(documents, 1):
-        formatted_result += f"{i}. {doc[:200]}...\n"  # 只显示前200个字符
-    
+        formatted_result += f"{i}. {doc}\n"  # 显示完整文档内容，便于模型提取
+
     return formatted_result
 
-@tool(description="传入查询语句query和检索到的文档列表documents，返回重排序后的文档列表，包含文档内容和相似度")
+@tool(description="必须在使用`rag_summary_tools`后调用此工具。传入原始查询语句query和从`rag_summary_tools`返回结果中提取的文档列表documents，返回重排序后的文档列表，包含文档内容和相似度")
 async def reorder_documents_tools(query: str, documents: List[str]) -> str:
     """重排序文档工具"""
     try:

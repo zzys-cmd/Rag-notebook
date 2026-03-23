@@ -103,6 +103,14 @@ class DatabaseSessionManager:
                 await db.commit()
                 await db.refresh(session)
 
+            # 检查是否是新会话且标题为默认值，如果是则更新为用户的第一个问题
+            if session.title == "新的对话":
+                # 生成用户问题的摘要作为标题（截取前30个字符）
+                title_summary = user_message[:30].strip()
+                if len(user_message) > 30:
+                    title_summary += "..."
+                session.title = title_summary
+
             # 添加用户消息
             user_msg = ChatMessage(
                 session_id=session.id,
