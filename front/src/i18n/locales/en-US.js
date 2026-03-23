@@ -17,6 +17,7 @@ export default {
   nav: {
     home: 'Home',
     aiChat: 'AI Chat',
+    sessions: 'Sessions',
     my: 'My'
   },
   home: {

@@ -17,6 +17,7 @@ export default {
   nav: {
     home: '首页',
     aiChat: 'AI问答',
+    sessions: '会话管理',
     my: '我的'
   },
   home: {
