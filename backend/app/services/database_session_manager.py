@@ -162,9 +162,21 @@ class DatabaseSessionManager:
                 )
             return [session.id for session in sessions]
 
-    async def get_user_sessions(self, user_id: str) -> List[str]:
-        """获取用户所有会话 ID"""
-        return await self.get_all_session_ids(user_id)
+    async def get_user_sessions(self, user_id: str) -> List[Dict]:
+        """获取用户所有会话详细信息"""
+        async with AsyncSessionLocal() as db:
+            sessions = await db.run_sync(
+                lambda session: session.query(ChatSession).filter(ChatSession.user_id == user_id).all()
+            )
+            return [
+                {
+                    "id": session.id,
+                    "title": session.title,
+                    "created_at": session.created_at.isoformat() if session.created_at else None,
+                    "updated_at": session.updated_at.isoformat() if session.updated_at else None
+                }
+                for session in sessions
+            ]
 
 
 # 全局数据库会话管理器实例
