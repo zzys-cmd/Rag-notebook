@@ -4,7 +4,10 @@
     
     <div class="sessions-content">
       <div class="sessions-header">
-        <h2>历史会话</h2>
+        <div class="header-title">
+          <van-icon name="chat-o" size="24" color="#1989fa" />
+          <h2>历史会话</h2>
+        </div>
         <van-button type="primary" @click="createNewSession">
           新会话
         </van-button>
@@ -28,8 +31,8 @@
           <van-cell
             v-for="session in sessionStore.sessions"
             :key="session.session_id"
-            :title="getSessionTitle(session)"
-            :value="getSessionTime(session)"
+            :title="session.title || '新会话'"
+            :value="formatSessionTime(session.created_at)"
             is-link
             @click="selectSession(session)"
             :class="{ active: sessionStore.currentSession?.session_id === session.session_id }"
@@ -74,22 +77,30 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { showToast, Toast } from 'vant';
 import TabBar from '../components/TabBar.vue';
 import { useSessionStore } from '../store/session';
 import { useUserStore } from '../store/user';
 
 const router = useRouter();
+const route = useRoute();
 const sessionStore = useSessionStore();
 const userStore = useUserStore();
 
 const showNewSessionDialog = ref(false);
 const newSessionQuery = ref('');
 
-// 组件挂载时获取会话列表
-onMounted(async () => {
+// 监听路由变化，确保每次访问会话管理页面时自动刷新会话列表
+watch(() => route.path, async (newPath) => {
+  if (newPath === '/sessions') {
+    await loadSessions();
+  }
+});
+
+// 加载会话列表
+const loadSessions = async () => {
   // 检查是否登录
   if (!userStore.getLoginStatus) {
     showToast('请先登录');
@@ -107,8 +118,7 @@ onMounted(async () => {
   }
   
   if (userStore.userInfo) {
-    // 调试信息：打印用户信息
-    console.log('用户信息:', userStore.userInfo);
+
     
     // 尝试获取用户ID，支持不同的字段名
     let userId = userStore.userInfo.uuid || userStore.userInfo.id || userStore.userInfo.user_id;
@@ -123,6 +133,11 @@ onMounted(async () => {
   } else {
     showToast('获取用户信息失败');
   }
+};
+
+// 组件挂载时获取会话列表
+onMounted(async () => {
+  await loadSessions();
 });
 
 // 获取会话标题（使用第一条消息作为标题）
@@ -134,9 +149,21 @@ const getSessionTitle = (session) => {
   return '新会话';
 };
 
-// 获取会话时间（这里简化处理，实际应该从会话数据中获取）
-const getSessionTime = (session) => {
-  return new Date().toLocaleString();
+// 格式化会话时间
+const formatSessionTime = (timeString) => {
+  if (!timeString) return '';
+  try {
+    const date = new Date(timeString);
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch (error) {
+    return timeString;
+  }
 };
 
 // 选择会话
@@ -147,8 +174,7 @@ const selectSession = (session) => {
 
 // 删除会话
 const deleteSession = async (sessionId) => {
-  // 调试信息：打印会话ID
-  console.log('删除会话，会话ID:', sessionId);
+
   
   const result = await sessionStore.deleteSession(sessionId);
   if (result.success) {
@@ -177,12 +203,12 @@ const confirmNewSession = async () => {
   
   try {
     const result = await sessionStore.createSession(newSessionQuery.value);
-    if (result.success) {
+    if (result.success && result.data?.session_id) {
       showToast('会话创建成功');
       showNewSessionDialog.value = false;
       newSessionQuery.value = '';
-      // 跳转到聊天页面
-      router.push('/aichat');
+      // 跳转到带会话ID的聊天页面
+      router.push(`/aichat/${result.data.session_id}`);
     } else {
       showToast(result.message || '创建会话失败');
     }
@@ -190,8 +216,10 @@ const confirmNewSession = async () => {
     showToast('创建会话失败');
     console.error('创建会话失败:', error);
   } finally {
-    // 使用返回的toast实例进行清除
-    toastInstance.clear();
+    // 使用toast实例的关闭方法
+    if (toastInstance && toastInstance.close) {
+      toastInstance.close();
+    }
   }
 };
 </script>
@@ -218,6 +246,12 @@ const confirmNewSession = async () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .sessions-header h2 {
