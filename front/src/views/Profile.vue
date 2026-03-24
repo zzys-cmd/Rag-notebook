@@ -15,18 +15,21 @@
               round
               width="60"
               height="60"
-              :src="userInfo?.avatar ? `http://192.168.0.114:8000/avatar/${userInfo.avatar}` : 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'"
+              :src="userInfo?.avatar ? `http://localhost:8001${userInfo.avatar}` : 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'"
             />
           </template>
         </van-cell>
       </van-cell-group>
       
       <van-cell-group inset class="info-group">
-        <van-cell title="用户名" :value="userInfo.username || 'admin'" />
-        <van-cell title="昵称" :value="userInfo.nickname || '暂无昵称'" is-link @click="showNicknameDialog" />
-        <van-cell title="性别" :value="userInfo.gender || '未设置'" is-link @click="showGenderDialog" />
-        <van-cell title="手机号" :value="userInfo.phone || '未设置'" is-link @click="showPhoneDialog" />
+        <van-cell title="用户ID" :value="userInfo?.id || userInfo?.uuid || '未设置'" />
+        <van-cell title="用户名" :value="userInfo?.username || '未设置'" is-link @click="showUsernameDialog" />
+        <van-cell title="邮箱" :value="userInfo?.email || '未设置'" is-link @click="showEmailDialog" />
+        <van-cell title="手机号" :value="userInfo?.telephone || '未设置'" is-link @click="showPhoneDialog" />
+        <van-cell title="性别" :value="genderText || '未设置'" is-link @click="showGenderDialog" />
         <van-cell title="个人简介" :value="userBio || '暂无简介'" is-link @click="showBioDialog" />
+        <van-cell title="注册时间" :value="createTimeText || '未设置'" />
+        <van-cell title="最后登录时间" :value="lastLoginText || '未设置'" />
       </van-cell-group>
       
       <van-cell-group inset class="security-group">
@@ -64,20 +67,21 @@ onMounted(async () => {
       duration: 0
     });
     
-    // console.log('获取用户信息，当前token:', userStore.token);
+    console.log('获取用户信息，当前token:', userStore.token);
     
     // 使用新的 getUserInfoDetail 方法
     const result = await userStore.getUserInfoDetail();
+    
+    console.log('获取用户信息结果:', result);
+    console.log('当前用户信息:', userStore.userInfo);
     
     // 手动关闭加载提示
     loadingInstance.close();
     
     if (result.success) {
-      console.log('获取用户信息成功:', userStore.userInfo);
       // 显示成功提示
-      // showSuccessToast('获取用户信息成功');
+      showSuccessToast('获取用户信息成功');
     } else {
-      console.error('获取用户信息失败:', result.message);
       showFailToast(result.message || '获取用户信息失败');
     }
   } catch (error) {
@@ -91,6 +95,44 @@ onMounted(async () => {
 const userInfo = computed(() => userStore.userInfo);
 const userId = computed(() => userStore.token ? userStore.token.substring(0, 5) : '');
 const userBio = computed(() => userStore.userInfo?.bio || '暂无简介');
+
+const genderText = computed(() => {
+  const gender = userInfo.value?.gender;
+  switch (gender) {
+    case 1:
+      return '男';
+    case 2:
+      return '女';
+    case 3:
+      return '其他';
+    default:
+      return '其他';
+  }
+});
+
+const createTimeText = computed(() => {
+  if (!userInfo.value?.create_time) return '未设置';
+  const date = new Date(userInfo.value?.create_time);
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+});
+
+const lastLoginText = computed(() => {
+  if (!userInfo.value?.last_login) return '未设置';
+  const date = new Date(userInfo.value?.last_login);
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+});
 
 const showPasswordConfirm = () => {
   // 使用ref创建响应式变量
@@ -206,10 +248,14 @@ const showBioDialog = () => {
         duration: 0
       });
       
-      console.log('更新个人简介:', newBioValue.value);
-      
       // 调用API更新个人简介
-      const result = await userStore.updateUserInfo({ bio: newBioValue.value });
+      const result = await userStore.updateUserInfo({ 
+        username: userInfo.value?.username || '',
+        email: userInfo.value?.email || '',
+        telephone: userInfo.value?.telephone || '',
+        gender: userInfo.value?.gender || 3,
+        bio: newBioValue.value
+      });
       
       // 关闭加载提示
       loadingInstance.close();
@@ -229,83 +275,26 @@ const showBioDialog = () => {
   });
 };
 
-const showNicknameDialog = () => {
-  // 使用ref创建响应式变量
-  const newNicknameValue = ref(userInfo.value?.nickname || '');
-  
-  showDialog({
-    title: '修改昵称',
-    showCancelButton: true,
-    confirmButtonText: '确认',
-    className: 'nickname-dialog',
-    message: h('div', { style: 'text-align: left; padding: 10px 0;' }, [
-      h('div', { style: 'margin-bottom: 15px;' }, [
-        h('div', { style: 'margin-bottom: 5px; text-align: left;' }, '昵称：'),
-        h('input', {
-          type: 'text',
-          value: newNicknameValue.value,
-          onInput: (e) => { newNicknameValue.value = e.target.value },
-          style: 'width: 100%; border: 1px solid #dcdee0; border-radius: 4px; padding: 8px; box-sizing: border-box;'
-        })
-      ])
-    ])
-  }).then(async () => {
-    // 点击确认按钮
-    try {
-      // 显示加载提示
-      const loadingInstance = showLoadingToast({
-        message: '保存中...',
-        forbidClick: true,
-        duration: 0
-      });
-      
-      console.log('更新昵称:', newNicknameValue.value);
-      
-      // 调用API更新昵称
-      const result = await userStore.updateUserInfo({ nickname: newNicknameValue.value });
-      
-      // 关闭加载提示
-      loadingInstance.close();
-      
-      if (result && result.success) {
-        showSuccessToast('昵称修改成功');
-      } else {
-        showFailToast((result && result.message) || '昵称修改失败');
-      }
-    } catch (error) {
-      console.error('更新昵称失败:', error);
-      showToast.clear();
-      showToast.fail('昵称修改失败');
-    }
-  }).catch(() => {
-    // 点击取消按钮
-  });
-};
-
 const showGenderDialog = () => {
   // 使用ref创建响应式变量
-  const selectedGender = ref(userInfo.value?.gender || '男');
+  const selectedGender = ref(userInfo.value?.gender || 3);
   
   // 使用Vant的Dialog组件显示性别选择
   showDialog({
     title: '选择性别',
     message: h('div', { 
-      style: 'padding: 10px; text-align: left;',
-      onInput: (e) => {
-        selectedGender.value = e.target.value;
-      }
+      style: 'padding: 10px; text-align: left;'
     }, [
       h('div', { style: 'margin-bottom: 15px;' }, [
         h('input', {
           type: 'radio',
           name: 'gender',
-          value: '男',
-          checked: selectedGender.value === '男',
+          value: 1,
+          checked: selectedGender.value === 1,
           style: 'margin-right: 8px;',
-          onChange: (e) => selectedGender.value = e.target.value
+          onChange: (e) => selectedGender.value = parseInt(e.target.value)
         }),
         h('label', { 
-          for: 'gender-male',
           style: 'cursor: pointer; margin-right: 20px;' 
         }, '男')
       ]),
@@ -313,15 +302,27 @@ const showGenderDialog = () => {
         h('input', {
           type: 'radio',
           name: 'gender',
-          value: '女',
-          checked: selectedGender.value === '女',
+          value: 2,
+          checked: selectedGender.value === 2,
           style: 'margin-right: 8px;',
-          onChange: (e) => selectedGender.value = e.target.value
+          onChange: (e) => selectedGender.value = parseInt(e.target.value)
         }),
         h('label', { 
-          for: 'gender-female',
           style: 'cursor: pointer; margin-right: 20px;' 
         }, '女')
+      ]),
+      h('div', { style: 'margin-bottom: 15px;' }, [
+        h('input', {
+          type: 'radio',
+          name: 'gender',
+          value: 3,
+          checked: selectedGender.value === 3,
+          style: 'margin-right: 8px;',
+          onChange: (e) => selectedGender.value = parseInt(e.target.value)
+        }),
+        h('label', { 
+          style: 'cursor: pointer;' 
+        }, '其他')
       ])
     ]),
     confirmButtonText: '确认',
@@ -337,7 +338,13 @@ const showGenderDialog = () => {
     });
     
     // 调用API更新性别
-    userStore.updateUserInfo({ gender: selectedGender.value })
+    userStore.updateUserInfo({ 
+      username: userInfo.value?.username || '',
+      email: userInfo.value?.email || '',
+      telephone: userInfo.value?.telephone || '',
+      gender: selectedGender.value,
+      bio: userInfo.value?.bio || ''
+    })
       .then((result) => {
         // 关闭加载提示
         loadingInstance.close();
@@ -358,9 +365,125 @@ const showGenderDialog = () => {
   });
 };
 
+
+
+const showUsernameDialog = () => {
+  // 使用ref创建响应式变量
+  const newUsernameValue = ref(userInfo.value?.username || '');
+  
+  showDialog({
+    title: '修改用户名',
+    showCancelButton: true,
+    confirmButtonText: '确认',
+    className: 'username-dialog',
+    message: h('div', { style: 'text-align: left; padding: 10px 0;' }, [
+      h('div', { style: 'margin-bottom: 15px;' }, [
+        h('div', { style: 'margin-bottom: 5px; text-align: left;' }, '用户名：'),
+        h('input', {
+          type: 'text',
+          value: newUsernameValue.value,
+          onInput: (e) => { newUsernameValue.value = e.target.value },
+          style: 'width: 100%; border: 1px solid #dcdee0; border-radius: 4px; padding: 8px; box-sizing: border-box;'
+        })
+      ])
+    ])
+  }).then(async () => {
+    // 点击确认按钮
+    try {
+      // 显示加载提示
+      const loadingInstance = showLoadingToast({
+        message: '保存中...',
+        forbidClick: true,
+        duration: 0
+      });
+      
+      // 调用API更新用户名
+      const result = await userStore.updateUserInfo({ 
+        username: newUsernameValue.value,
+        email: userInfo.value?.email || '',
+        telephone: userInfo.value?.telephone || '',
+        gender: userInfo.value?.gender || 3,
+        bio: userInfo.value?.bio || ''
+      });
+      
+      // 关闭加载提示
+      loadingInstance.close();
+      
+      if (result && result.success) {
+        showSuccessToast('用户名修改成功');
+      } else {
+        showFailToast((result && result.message) || '用户名修改失败');
+      }
+    } catch (error) {
+      console.error('更新用户名失败:', error);
+      showToast.clear();
+      showToast.fail('用户名修改失败');
+    }
+  }).catch(() => {
+    // 点击取消按钮
+  });
+};
+
+const showEmailDialog = () => {
+  // 使用ref创建响应式变量
+  const newEmailValue = ref(userInfo.value?.email || '');
+  
+  showDialog({
+    title: '修改邮箱',
+    showCancelButton: true,
+    confirmButtonText: '确认',
+    className: 'email-dialog',
+    message: h('div', { style: 'text-align: left; padding: 10px 0;' }, [
+      h('div', { style: 'margin-bottom: 15px;' }, [
+        h('div', { style: 'margin-bottom: 5px; text-align: left;' }, '邮箱：'),
+        h('input', {
+          type: 'email',
+          value: newEmailValue.value,
+          onInput: (e) => { newEmailValue.value = e.target.value },
+          style: 'width: 100%; border: 1px solid #dcdee0; border-radius: 4px; padding: 8px; box-sizing: border-box;'
+        })
+      ])
+    ])
+  }).then(async () => {
+    // 点击确认按钮
+    try {
+      // 显示加载提示
+      const loadingInstance = showLoadingToast({
+        message: '保存中...',
+        forbidClick: true,
+        duration: 0
+      });
+      
+      // 调用API更新邮箱
+      const result = await userStore.updateUserInfo({ 
+        username: userInfo.value?.username || '',
+        email: newEmailValue.value,
+        telephone: userInfo.value?.telephone || '',
+        gender: userInfo.value?.gender || 3,
+        bio: userInfo.value?.bio || ''
+      });
+      
+      // 关闭加载提示
+      loadingInstance.close();
+      
+      if (result && result.success) {
+        showSuccessToast('邮箱修改成功');
+      } else {
+        showFailToast((result && result.message) || '邮箱修改失败');
+      }
+    } catch (error) {
+      console.error('更新邮箱失败:', error);
+      showToast.clear();
+      showToast.fail('邮箱修改失败');
+    }
+  }).catch(() => {
+    // 点击取消按钮
+  });
+};
+
 const showPhoneDialog = () => {
   // 使用ref创建响应式变量
-  const newPhoneValue = ref(userInfo.value?.phone || '');
+  const newPhoneValue = ref(userInfo.value?.telephone || '');
   
   showDialog({
     title: '修改手机号',
@@ -388,10 +511,14 @@ const showPhoneDialog = () => {
         duration: 0
       });
       
-      console.log('更新手机号:', newPhoneValue.value);
-      
       // 调用API更新手机号
-      const result = await userStore.updateUserInfo({ phone: newPhoneValue.value });
+      const result = await userStore.updateUserInfo({ 
+        username: userInfo.value?.username || '',
+        email: userInfo.value?.email || '',
+        telephone: newPhoneValue.value,
+        gender: userInfo.value?.gender || 3,
+        bio: userInfo.value?.bio || ''
+      });
       
       // 关闭加载提示
       loadingInstance.close();
@@ -414,7 +541,7 @@ const showPhoneDialog = () => {
 const showAvatarDialog = () => {
   // 使用ref创建响应式变量
   const selectedFile = ref(null);
-  const previewUrl = ref(userInfo.value?.avatar ? `http://192.168.0.114:8000/avatar/${userInfo.value.avatar}` : 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg');
+  const previewUrl = ref(userInfo.value?.avatar ? `http://localhost:8001${userInfo.value.avatar}` : 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg');
   
   showDialog({
     title: '修改头像',
@@ -467,10 +594,10 @@ const showAvatarDialog = () => {
       
       // 创建FormData对象
       const formData = new FormData();
-      formData.append('avatar_file', selectedFile.value);
+      formData.append('img', selectedFile.value);
       
       // 发送上传请求
-      const response = await axios.post(`${apiConfig.baseURL}/api/user/upload-avatar`, formData, {
+      const response = await axios.post(`${apiConfig.userBaseURL}${apiConfig.endpoints.uploadFile}`, formData, {
         headers: {
           'Authorization': `Bearer ${userStore.token}`,
           'Content-Type': 'multipart/form-data'

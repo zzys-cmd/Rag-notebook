@@ -7,7 +7,7 @@
           round
           width="80"
           height="80"
-          :src="userInfo && userInfo.avatar ? `http://192.168.0.114:8000/avatar/${userInfo.avatar}` : 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'"
+          :src="userInfo && userInfo.avatar ? `http://localhost:8001${userInfo.avatar}` : 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'"
         />
       </div>
       <div class="info">
