@@ -78,6 +78,7 @@ const userInput = ref('');
 const messagesContainer = ref(null);
 const isLoading = ref(false);
 const sessionId = ref('');
+const hasJumped = ref(false);
 
 const router = useRouter();
 const route = useRoute();
@@ -191,26 +192,38 @@ const fetchAIResponse = async (userMessage) => {
           
           switch (json.type) {
             case 'step':
-              console.log('执行步骤:', json.content);
               break;
             case 'response':
               const content = json.content || '';
               if (content) {
                 aiResponse += content;
-                // 更新最后一条消息
-                messages.value[messages.value.length - 1].content = aiResponse;
-                await nextTick();
-                scrollToBottom();
+                
+                // 逐字符显示打字机效果
+                let currentIndex = 0;
+                const displayContent = messages.value[messages.value.length - 1].content || '';
+                const remainingContent = aiResponse.substring(displayContent.length);
+                
+                for (const char of remainingContent) {
+                  messages.value[messages.value.length - 1].content += char;
+                  await nextTick();
+                  scrollToBottom();
+                  // 控制打字速度，每个字符延迟30ms
+                  await new Promise(resolve => setTimeout(resolve, 10));
+                }
               }
-              // 保存会话ID
-              if (json.session_id) {
+              // 保存会话ID（不立即跳转，避免中断SSE）
+              if (json.session_id && typeof json.session_id === 'string' && json.session_id.trim()) {
                 sessionId.value = json.session_id;
               }
               break;
             case 'done':
-              // 保存会话ID
-              if (json.session_id) {
+              // 保存会话ID并在所有数据接收完成后跳转
+              if (json.session_id && typeof json.session_id === 'string' && json.session_id.trim()) {
                 sessionId.value = json.session_id;
+                // 如果当前路由没有sessionId参数，跳转到带sessionId的路由
+                if (!route.params.sessionId) {
+                  router.push(`/aichat/${json.session_id}`);
+                }
               }
               break;
             case 'error':
