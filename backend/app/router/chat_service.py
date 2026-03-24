@@ -55,14 +55,14 @@ class ChatService:
         session_ids = await sm.session_manager.get_all_session_ids()
         return session_ids
 
-    async def handle_get_user_sessions(self, user_id: str, current_user_id: str) -> List[str]:
+    async def handle_get_user_sessions(self, user_id: str, current_user_id: str) -> List[Dict]:
         """处理获取用户会话逻辑"""
         # 确保用户只能获取自己的会话
         if user_id != current_user_id:
             raise HTTPException(status_code=403, detail="Forbidden")
 
-        session_ids = await sm.session_manager.get_user_sessions(user_id)
-        return session_ids
+        sessions = await sm.session_manager.get_user_sessions(user_id)
+        return sessions
 
     async def handle_add_vector_single(self, file: UploadFile, user_id: str) -> str:
         """处理添加单个向量逻辑"""
