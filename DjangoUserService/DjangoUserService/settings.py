@@ -80,6 +80,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'DjangoUserService.wsgi.application'
 
+# settings.py
+# settings.py
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False,
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    },
+    'DEFAULT_AUTO_SCHEMA_CLASS': 'drf_yasg.inspectors.SwaggerAutoSchema',
+}
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
