@@ -28,16 +28,25 @@ export const useSessionStore = defineStore('session', {
           }
         });
         
-        // 正确处理响应数据，从 response.data.data.sessions 获取会话ID数组
-        const sessionIds = response.data.data?.sessions || [];
+        // 正确处理响应数据，从 response.data.data.sessions 获取会话列表
+        const sessionsData = response.data.data?.sessions || [];
         
-        // 将会话ID转换为包含session_id属性的对象数组
-        this.sessions = sessionIds.map(sessionId => ({
-          session_id: sessionId
+        // 将会话数据转换为前端需要的格式
+        this.sessions = sessionsData.map(session => ({
+          session_id: session.id,
+          title: session.title,
+          created_at: session.created_at,
+          updated_at: session.updated_at
         }));
         
-        // 调试信息：打印会话列表
-        console.log('获取到的会话列表:', this.sessions);
+        // 按照更新时间和创建时间综合排序（优先按更新时间，其次按创建时间）
+        this.sessions.sort((a, b) => {
+          const dateA = new Date(a.updated_at || a.created_at);
+          const dateB = new Date(b.updated_at || b.created_at);
+          return dateB - dateA; // 降序排列，最新的在前面
+        });
+        
+
         return {
           success: true,
           data: this.sessions

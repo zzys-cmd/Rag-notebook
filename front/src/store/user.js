@@ -120,12 +120,12 @@ export const useUserStore = defineStore('user', {
         // 检查响应状态
         if (response.status === 200) {
           // 更新用户信息
-          this.userInfo = response.data.user;
+          this.userInfo = response.data.data;
           
           return {
             success: true,
             message: response.data.message,
-            data: response.data.user
+            data: response.data.data
           };
         } else {
           return {
@@ -138,6 +138,107 @@ export const useUserStore = defineStore('user', {
         return {
           success: false,
           message: error.response?.data?.detail || '获取用户信息请求失败，请稍后再试'
+        };
+      }
+    },
+    
+    // 更新用户信息
+    async updateUserInfo(userData) {
+      try {
+        // 从localStorage获取token
+        const token = localStorage.getItem('jwt_token') || this.token;
+        // 检查是否有token
+        if (!token) {
+          return {
+            success: false,
+            message: '未登录'
+          };
+        }
+        
+        // 发送更新用户信息请求
+        console.log('更新用户信息请求参数:', userData);
+        const response = await axios.put('/user/update/', userData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'X-CSRFTOKEN': getCsrfToken(),
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        // 检查响应状态
+        if (response.status === 200) {
+          // 更新用户信息
+          this.userInfo = response.data.user;
+          
+          // 如果返回了新的token，更新token
+          if (response.data.token) {
+            this.token = response.data.token;
+            localStorage.setItem('jwt_token', response.data.token);
+          }
+          
+          return {
+            success: true,
+            message: response.data.message
+          };
+        } else {
+          return {
+            success: false,
+            message: response.data.detail || '更新用户信息失败'
+          };
+        }
+      } catch (error) {
+        console.error('更新用户信息请求失败:', error);
+        console.error('错误响应:', error.response?.data);
+        console.error('错误状态:', error.response?.status);
+        return {
+          success: false,
+          message: error.response?.data?.message || error.response?.data?.detail || '更新用户信息请求失败，请稍后再试'
+        };
+      }
+    },
+    
+    // 更新密码
+    async updatePassword(oldPassword, newPassword) {
+      try {
+        // 从localStorage获取token
+        const token = localStorage.getItem('jwt_token') || this.token;
+        // 检查是否有token
+        if (!token) {
+          return {
+            success: false,
+            message: '未登录'
+          };
+        }
+        
+        // 发送更新密码请求
+        const response = await axios.post('/user/change_password/', {
+          old_password: oldPassword,
+          new_password: newPassword
+        }, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'X-CSRFTOKEN': getCsrfToken(),
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        // 检查响应状态
+        if (response.status === 200) {
+          return {
+            success: true,
+            message: response.data.message
+          };
+        } else {
+          return {
+            success: false,
+            message: response.data.detail || '更新密码失败'
+          };
+        }
+      } catch (error) {
+        console.error('更新密码请求失败:', error);
+        return {
+          success: false,
+          message: error.response?.data?.detail || '更新密码请求失败，请稍后再试'
         };
       }
     }

@@ -1,7 +1,7 @@
 <template>
   <van-tabbar v-model="active" route>
     <van-tabbar-item to="/aichat" icon="chat-o">{{ $t('nav.aiChat') }}</van-tabbar-item>
-    <van-tabbar-item to="/sessions" icon="list">{{ $t('nav.sessions') }}</van-tabbar-item>
+    <van-tabbar-item to="/sessions" icon="comment-circle-o">{{ $t('nav.sessions') }}</van-tabbar-item>
     <van-tabbar-item to="/my" icon="user-o">{{ $t('nav.my') }}</van-tabbar-item>
   </van-tabbar>
 </template>
