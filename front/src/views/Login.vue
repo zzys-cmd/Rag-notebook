@@ -43,6 +43,9 @@
           </van-button>
         </div>
         
+        <div class="register-link">
+          还没有账号？<span @click="goToRegister">去注册</span>
+        </div>
       </van-form>
     </div>
   </div>
@@ -100,6 +103,10 @@ const onSubmit = async (values) => {
 const onClickLeft = () => {
   router.back();
 };
+
+const goToRegister = () => {
+  router.push('/register');
+};
 </script>
 
 <style scoped>
@@ -144,5 +151,16 @@ const onClickLeft = () => {
 
 .login-tips p {
   margin: 8px 0;
+}
+
+.register-link {
+  text-align: center;
+  margin-top: 24px;
+  color: #969799;
+  font-size: 14px;
+}
+
+.register-link span {
+  color: #1989fa;
 }
 </style>
