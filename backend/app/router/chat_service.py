@@ -1,5 +1,6 @@
 from typing import List, Optional, Tuple, Dict, Any
 import uuid
+import magic
 
 from fastapi import HTTPException, UploadFile
 from langchain_chroma.vectorstores import cosine_similarity
@@ -74,10 +75,19 @@ class ChatService:
         if file.size > max_file_size:
             raise HTTPException(status_code=400, detail="文件大小不能超过20MB")
 
-        # 检查上传的文件类型是否允许
-        allowed_types = ('.pdf', '.txt')
-        if not file.filename.endswith(allowed_types):
-            raise HTTPException(status_code=400, detail="仅支持上传PDF和TXT文件")
+        # 使用python-magic检查文件类型
+        content = await file.read()
+        # 重置文件指针
+        await file.seek(0)
+        
+        # 检测文件类型
+        mime = magic.Magic(mime=True)
+        file_type = mime.from_buffer(content)
+        
+        # 检查文件类型是否允许
+        allowed_mime_types = {'application/pdf', 'text/plain'}
+        if file_type not in allowed_mime_types:
+            raise HTTPException(status_code=400, detail=f"文件类型不支持，仅支持PDF和TXT文件。检测到的文件类型: {file_type}")
 
         # 处理文件并存储到向量数据库
         await store.get_document(files=[file], user_id=user_id)
@@ -89,16 +99,20 @@ class ChatService:
         store = VectorStoreService()
         max_file_folder_size = 200 * 1024 * 1024  # 最大文件大小200MB
 
-        # 检查文件类型
-        allowed_types = ('.pdf', '.txt')
-        if not all([file.filename.endswith(allowed_types) for file in files]):
-            raise HTTPException(status_code=400, detail="仅支持上传PDF和TXT文件")
-
-        # 检查文件大小
+        # 检查文件类型和大小
         total_size = 0
+        allowed_mime_types = {'application/pdf', 'text/plain'}
+        mime = magic.Magic(mime=True)
+        
         for file in files:
             content = await file.read()
             total_size += len(content)
+            
+            # 检测文件类型
+            file_type = mime.from_buffer(content)
+            if file_type not in allowed_mime_types:
+                raise HTTPException(status_code=400, detail=f"文件 {file.filename} 类型不支持，仅支持PDF和TXT文件。检测到的文件类型: {file_type}")
+            
             # 重置文件指针以便后续处理
             await file.seek(0)
 
