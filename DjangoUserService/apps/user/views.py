@@ -52,7 +52,7 @@ class LoginView(APIView):
 
 class RegisterView(APIView):
     """类视图，处理用户注册"""
-    @rate_limit(limit=1, window=60)
+    # @rate_limit(limit=1, window=60)
     def post(self, request) -> Response:
         """
         处理post请求，用户注册
@@ -64,7 +64,7 @@ class RegisterView(APIView):
             user = serializer.save()  # 调用序列化器的create方法创建用户
             # 生成JWT token
             token, expire_time = jwttoken.generate_token(user)
-            return Response({"message": f"{user.username} 注册成功", "user": UserSerializer(user).data, "token": token}, status=status.HTTP_201_CREATED)
+            return Response({"status": 201, "message": f"{user.username} 注册成功", "user": UserSerializer(user).data, "token": token}, status=status.HTTP_201_CREATED)
         else:
             return Response({"detail": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 

@@ -110,4 +110,4 @@ class User(AbstractBaseUser):
         return self.username
 
     class Meta:
-        db_table = 'officeAuth_officeuser'
+        db_table = 'user_service'
