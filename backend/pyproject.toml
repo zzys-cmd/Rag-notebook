@@ -29,6 +29,8 @@ dependencies = [
     "python-multipart>=0.0.22",
     "dashscope>=1.25.14",
     "pypdf>=6.9.2",
+    "python-magic>=0.4.27",
+    "python-magic-bin>=0.4.14",
 ]
 
 # 开发依赖
