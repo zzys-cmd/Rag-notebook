@@ -41,7 +41,7 @@
           
           <van-field
             v-model="form.telephone"
-            placeholder="请输入手机号码（选填）"
+            placeholder="请输入手机号码"
             type="tel"
             left-icon="phone"
             maxlength="11"
