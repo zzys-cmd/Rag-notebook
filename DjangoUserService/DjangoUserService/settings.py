@@ -105,6 +105,11 @@ DATABASES = {
         'PASSWORD': '060517',
         'HOST': 'localhost',
         'PORT': '3306',
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+            'use_unicode': True,
+            'init_command': 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci',
+        },
     }
 }
 
