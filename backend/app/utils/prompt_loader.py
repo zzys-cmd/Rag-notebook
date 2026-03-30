@@ -12,6 +12,7 @@ def load_prompt(prompt_type: str = 'main_prompt'):
             - main_prompt: 主要提示词
             - rag_summary_prompt: RAG摘要提示词
             - report_prompt: 报告提示词
+            - reorder_prompt: 文档重排序提示词
 
     Returns:
         提示词模板内容
