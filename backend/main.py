@@ -13,6 +13,9 @@ from app.services.database_session_manager import init_database_session_manager
 
 from app.core.failed_response_register import register_exception_handlers
 from app.core.rate_limit import RateLimitMiddleware
+from app.core.logger_handler import logger
+
+from app.rag.reorder_service import check_and_download_reranker_model
 
 app = FastAPI()
 
@@ -61,18 +64,22 @@ async def startup_event():
     """应用启动时初始化会话管理器"""
     # 初始化数据库表结构
     await init_db()
-    print("数据库表结构初始化完成")
+    logger.info("数据库表结构初始化完成")
     
     # 使用数据库版本的会话管理器
     await init_database_session_manager()
-    print("数据库会话管理器初始化完成")
+    logger.info("数据库会话管理器初始化完成")
 
     # 连接Redis
     await connect_redis()
-    print("Redis连接初始化完成")
+    logger.info("Redis连接初始化完成")
+    
+    # 检查并重排序模型
+    check_and_download_reranker_model()
+    logger.info("重排序模型检查完成")
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """应用关闭时关闭Redis连接"""
     await close_redis()
-    print("Redis连接已关闭")
+    logger.info("Redis连接已关闭")
