@@ -3,17 +3,13 @@ import uuid
 import magic
 
 from fastapi import HTTPException, UploadFile
-from langchain_chroma.vectorstores import cosine_similarity
-from langchain_ollama import OllamaEmbeddings
-import numpy as np
 
 from app.core.logger_handler import logger
 from app.rag.vector_store import VectorStoreService
 from app.rag.rag_service import RagService
+from app.rag.reorder_service import reorder_service
 from app.agent.agent import get_agent_response
 from app.services import session_manager as sm
-from app.utils.config import rag_config
-
 
 class ChatService:
     """路由服务层，处理业务逻辑"""
@@ -133,52 +129,23 @@ class ChatService:
 
     async def handle_reorder(self, query: str, documents: List[str]) -> List[Dict[str, Any]]:
         """
-        使用Ollama嵌入模型对文档进行中文重排序
+        使用本地Ollama重排序模型对文档进行中文重排序
         :param query: 查询语句
         :param documents: 文档列表
         :return: 排序后的文档列表，包含文档内容和相似度
         """
         try:
-            # 检查文档列表是否为空
-            if not documents:
-                return []
+            # 使用本地重排序服务
+            result = await reorder_service.reorder_documents(query, documents)
             
-            # 初始化Ollama嵌入模型，使用配置文件中定义的模型
-            embeddings = OllamaEmbeddings(
-                model=rag_config['text_embedding_model_name'],
-                base_url="http://localhost:11434"
-            )
-            
-            # 获取查询的嵌入向量
-            query_embedding = await embeddings.aembed_query(query)
-            
-            # 获取所有文档的嵌入向量
-            doc_embeddings = await embeddings.aembed_documents(documents)
-            
-            # 检查嵌入向量是否为空
-            if not doc_embeddings:
-                return []
-            
-            # 计算查询与每个文档的余弦相似度
-            similarities = cosine_similarity(
-                [query_embedding],
-                doc_embeddings
-            )[0]
-            
-            # 按相似度排序
-            sorted_indices = np.argsort(similarities)[::-1]
-            
-            # 构建排序后的结果
-            sorted_docs = []
-            for idx in sorted_indices:
-                sorted_docs.append({
-                    "document": documents[idx],
-                    "similarity": float(similarities[idx])
-                })
-
-            # log记录排序结果
-            logger.info(f"重排序结果: {sorted_docs}")
-            return sorted_docs
+            if result["success"]:
+                # log记录排序结果
+                logger.info(f"【重排序结果】查询: {query} 排序结果: {[f'文档 {doc['document']}: {doc['similarity']:.4f}' for doc in result['documents']]}")
+                return result["documents"]
+            else:
+                logger.warning(f"【重排序失败】{result['error']}")
+                # 如果重排序失败，返回原始文档
+                return [{"document": doc, "similarity": 0.0} for doc in documents]
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"重排序过程中出错: {str(e)}")
 
