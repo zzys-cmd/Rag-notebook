@@ -48,5 +48,16 @@ class EmbedModelFactory(BaseModelFactory):
         )
 
 
+class RerankerModelFactory(BaseModelFactory):
+    """重排序模型工厂 - 已废弃，使用CrossEncoder模型"""
+    def generator(self) -> Optional[Embeddings | BaseChatModel]:
+        """生成模型"""
+        # 注意：重排序服务已改为使用sentence_transformers的CrossEncoder模型
+        # 这个工厂不再使用，保留仅为向后兼容
+        return None
+
+
 chat_model = ChatModelFactory().generator()
 embed_model = EmbedModelFactory().generator()
+# 重排序模型已改为使用CrossEncoder，不再使用Ollama模型
+reranker_model = None
