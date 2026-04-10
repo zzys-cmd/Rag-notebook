@@ -1,4 +1,5 @@
 import asyncio
+import concurrent.futures
 
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
@@ -118,11 +119,12 @@ class RagService:
 
             # 使用分批总结策略
             try:
-                # 对每个文档单独总结
+                # 对每个文档单独总结（使用线程池并发处理）
                 individual_summaries = []
                 max_documents = 3  # 使用前3个最相关的文档
                 
-                for i, doc in enumerate(reordered_documents[:max_documents], 1):
+                # 定义单个文档总结函数
+                async def summarize_document(i, doc):
                     logger.info(f"【RAG】正在总结第{i}个文档")
                     # 为单个文档构建上下文
                     single_context = f"【参考资料{i}】:{doc}\n"
@@ -135,8 +137,19 @@ class RagService:
                     )
                     end_time = time.time()
                     logger.info(f"【RAG】第{i}个文档总结耗时: {end_time - start_time:.2f}秒")
-                    individual_summaries.append(single_summary)
-                    logger.info(f"【RAG】第{i}个文档总结完成")
+                    return single_summary
+                
+                # 使用线程池并发处理文档总结
+                tasks = []
+                for i, doc in enumerate(reordered_documents[:max_documents], 1):
+                    tasks.append(summarize_document(i, doc))
+                
+                # 并发执行所有总结任务，最多5个线程
+                import time
+                start_time = time.time()
+                individual_summaries = await asyncio.gather(*tasks)
+                end_time = time.time()
+                logger.info(f"【RAG】所有文档总结完成，总耗时: {end_time - start_time:.2f}秒")
 
                 # 如果只有一个文档，直接返回其摘要
                 if len(individual_summaries) == 1:
