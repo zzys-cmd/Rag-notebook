@@ -63,6 +63,8 @@ class ReorderService:
                 device=self.device,
                 local_files_only=True
             )
+            # 强制使用评估模式，避免训练模式下的随机性
+            self._model.eval()
             logger.info(f"✅ 模型加载成功，使用设备：{self.device}")
         return self._model
     
@@ -92,7 +94,9 @@ class ReorderService:
             
             # 使用模型进行批量预测（batch_size=1避免padding令牌报错）
             model = await self.model
-            scores = model.predict(pairs, batch_size=1)
+            # 禁用梯度计算，提高推理性能
+            with torch.no_grad():
+                scores = model.predict(pairs, batch_size=1)
             
             # 构建结果列表
             scored_documents = []
