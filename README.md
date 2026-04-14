@@ -1,4 +1,4 @@
-# 🚀 智能对话服务 (v1.0.0)
+# 🚀 智能对话服务 (v1.1.0)
 
 ## 📋 目录
 
@@ -217,20 +217,46 @@ npm run dev
 # 或使用 pnpm
 pnpm run dev
 ```
-前端将在 `http://localhost:5173` 运行。
+前端将在 `http://localhost:3000` 运行。
 
-#### 启动用户服务（可选）
+#### 启动用户服务
 ```bash
 # 进入 Django 用户服务目录
 cd DjangoUserService
 
 # 使用 uv 安装依赖
-uv pip install -r requirements.txt
+uv sync
 
 # 启动 Django 服务
-python manage.py runserver
+uv run python manage.py runserver 8001
 ```
-用户服务将在 `http://localhost:8000` 运行。
+用户服务将在 `http://localhost:8001` 运行。
+
+#### 启动mysql服务
+
+```bash
+# 管理员运行cmd或powershell
+net start mysql
+```
+
+#### 启动redis服务
+
+```bash
+# 如果你是直接解压安装的redis
+redis-server
+
+# 如果是服务版的redis，管理员打开终端
+net start redis
+```
+
+#### 其他服务
+
+```bash
+# 如果使用ollama本地的模型，需要启动ollama服务
+ollama serve
+```
+
+
 
 ## 技术栈
 
