@@ -38,6 +38,7 @@ dependencies = [
     "torchvision>=0.26.0",
     "torchaudio>=2.11.0",
     "langchain-dashscope>=0.1.8",
+    "unstructured[all-docs]>=0.22.20",
 ]
 
 # 开发依赖
