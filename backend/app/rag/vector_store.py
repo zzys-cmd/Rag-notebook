@@ -18,7 +18,8 @@ from langchain_community.retrievers import BM25Retriever
 
 from app.utils.config import chroma_config
 from app.utils.factory import embed_model
-from app.utils.file_handler import pdf_loader, txt_loader, listdir_allowed_type, get_file_md5_hex
+from app.utils.file_handler import pdf_loader, txt_loader, listdir_allowed_type, get_file_md5_hex, markdown_loader, \
+    ppt_loader, word_loader
 from app.core.logger_handler import logger
 from app.utils.path_tool import get_abstract_path
 
@@ -198,6 +199,12 @@ class VectorStoreService:
             return await txt_loader(read_path)
         elif read_path.endswith('.pdf'):
             return await pdf_loader(read_path)
+        elif read_path.endswith('.md'):
+            return await markdown_loader(read_path)
+        elif read_path.endswith('.pptx'):
+            return await ppt_loader(read_path)
+        elif read_path.endswith('.docx'):
+            return await word_loader(read_path)
         else:
             return []
 
