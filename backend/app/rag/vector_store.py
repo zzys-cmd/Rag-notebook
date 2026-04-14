@@ -85,9 +85,10 @@ class VectorStoreService:
             documents.append(Document(page_content=doc, metadata=metadata))
         return documents
 
-    async def get_retriever(self):
+    async def get_retriever(self, query: str = None):
         """
         获取混合检索器（BM25 + 向量检索）
+        :param query: 查询语句，用于动态调整权重
         :return: EnsembleRetriever实例或单独的向量检索器
         """
         # 创建向量检索器
@@ -100,15 +101,57 @@ class VectorStoreService:
         
         # 根据是否有BM25检索器决定返回哪种检索器
         if bm25_retriever:
+            # 获取动态权重
+            weights = await self.get_dynamic_weights(query)
             # 创建混合检索器
             ensemble_retriever = EnsembleRetriever(
                 retrievers=[vector_retriever, bm25_retriever],
-                weights=[0.5, 0.5]  # 权重可以根据实际情况调整
+                weights=weights
             )
             return ensemble_retriever
         else:
             # 如果没有BM25检索器，只返回向量检索器
             return vector_retriever
+
+    @staticmethod
+    async def get_dynamic_weights(query: str = None):
+        """
+        根据查询动态调整权重
+        :param query: 查询语句
+        :return: 权重列表 [向量检索权重, BM25检索权重]
+        """
+        # 默认权重
+        default_vector_weight = 0.5
+        default_bm25_weight = 0.5
+        
+        if not query:
+            return [default_vector_weight, default_bm25_weight]
+        
+        # 根据查询特征调整权重
+        query_length = len(query)
+        query_words = len(query.split())
+        
+        # 长查询（>50字符）更适合向量检索
+        if query_length > 50:
+            vector_weight = 0.7
+            bm25_weight = 0.3
+        # 短查询（<20字符）更适合BM25检索
+        elif query_length < 20:
+            vector_weight = 0.3
+            bm25_weight = 0.7
+        # 中等长度查询使用默认权重
+        else:
+            vector_weight = default_vector_weight
+            bm25_weight = default_bm25_weight
+        
+        # 关键词密集的查询（词数/长度比例高）更适合BM25
+        if query_words > 0:
+            word_density = query_words / query_length
+            if word_density > 0.1:
+                bm25_weight = min(bm25_weight + 0.1, 0.7)
+                vector_weight = max(vector_weight - 0.1, 0.3)
+        
+        return [vector_weight, bm25_weight]
 
     async def check_md5_hex(self, md5_for_check: str) -> bool:
         """异步检查md5"""
