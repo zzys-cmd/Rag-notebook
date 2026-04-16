@@ -1,6 +1,7 @@
 import os
 import json
 import asyncio
+from langsmith import traceable
 from typing import List, Optional, AsyncGenerator
 
 from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
@@ -133,6 +134,14 @@ class AgentFactory:
 agent_factory = AgentFactory()
 
 
+def get_agent_executor():
+    """
+    获取AgentExecutor实例，用于LangGraph
+    :return: AgentExecutor实例
+    """
+    return agent_factory.create_agent_executor()
+
+
 async def get_agent_response(
         query: str,
         history: Optional[List[tuple]] = None,
@@ -196,7 +205,7 @@ async def get_agent_response(
             "steps": []
         }
 
-
+@traceable
 async def get_agent_stream_response(
         query: str,
         session_id: str,

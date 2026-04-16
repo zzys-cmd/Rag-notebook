@@ -1,4 +1,5 @@
 import time
+from dotenv import load_dotenv
 
 from fastapi import FastAPI, Request
 from starlette.middleware.cors import CORSMiddleware
@@ -16,6 +17,9 @@ from app.core.rate_limit import RateLimitMiddleware
 from app.core.logger_handler import logger
 
 from app.rag.reorder_service import check_and_download_reranker_model
+
+# 加载环境变量
+load_dotenv()
 
 app = FastAPI()
 
