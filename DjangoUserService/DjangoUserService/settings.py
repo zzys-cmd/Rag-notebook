@@ -9,13 +9,15 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 import pymysql
+from dotenv import load_dotenv
+
 pymysql.install_as_MySQLdb()
 
-from celery import Celery
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'MY_JWT_SECRET_KWY_FOR_USR_AND_I_JUST_WRITE_THIS'
+SECRET_KEY = os.getenv('JWT_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -81,7 +83,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'DjangoUserService.wsgi.application'
 
 # settings.py
-# settings.py
 SWAGGER_SETTINGS = {
     'USE_SESSION_AUTH': False,
     'SECURITY_DEFINITIONS': {
@@ -100,11 +101,11 @@ SWAGGER_SETTINGS = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'django_user_service',
-        'USER': 'root',
-        'PASSWORD': '060517',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT'),
         'OPTIONS': {
             'charset': 'utf8mb4',
             'use_unicode': True,
@@ -114,8 +115,8 @@ DATABASES = {
 }
 
 # Celery 配置
-CELERY_BROKER_URL = 'redis://127.0.0.1:6379/1'
-CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/2'
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND')
 # 统一时区设置
 CELERY_TIMEZONE = 'Asia/Shanghai'
 # 启用UTC
@@ -145,7 +146,7 @@ CELERY_RESULT_EXPIRES = 3600
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379/3',
+        'LOCATION': os.getenv('REDIS_CACHE_URL'),
     }
 }
 
