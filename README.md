@@ -1,4 +1,14 @@
-# 🚀 智能对话服务 (v1.1.0)
+# 🚀 RAG对话系统
+
+<div align="center">
+<a href="https://github.com/zzys-cmd/Rag-notebook/stargazers">
+  <img src="https://img.shields.io/github/stars/zzys-cmd/Rag-notebook?style=flat-square&label=Stars&color=orange" alt="Stars">
+</a>
+<a href="https://github.com/zzys-cmd/Rag-notebook/network/members">
+  <img src="https://img.shields.io/github/forks/zzys-cmd/Rag-notebook?style=flat-square&label=Forks&color=green" alt="Forks">
+</a> 
+  <img src="https://img.shields.io/badge/python-v3.12.4-blue.svg" alt="System">
+</div>
 
 ## 📋 目录
 
@@ -435,6 +445,13 @@ separators: ["\n\n", "\n", "。", "！", "？", "!", "?", " ", ""]
 - **[API 文档](./backend/api.md)**：后端 API 接口文档
 - **[用户服务 API](./DjangoUserService/api.md)**：用户服务 API 文档
 
+## Star History
+
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=zzys-cmd/Rag-notebook&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=zzys-cmd/Rag-notebook&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=zzys-cmd/Rag-notebook&type=date&legend=top-left" />
+ </picture>
 ## 联系方式
 
 如有任何问题或建议，请随时联系我们。😊
