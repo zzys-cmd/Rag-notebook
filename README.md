@@ -452,6 +452,13 @@ separators: ["\n\n", "\n", "。", "！", "？", "!", "?", " ", ""]
    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=zzys-cmd/Rag-notebook&type=date&legend=top-left" />
    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=zzys-cmd/Rag-notebook&type=date&legend=top-left" />
  </picture>
-## 联系方式
 
-如有任何问题或建议，请随时联系我们。😊
+
+## 联系作者
+
+如有任何问题或建议，欢迎在GitHub提交issues或联系作者
+
+联系方式：
+
+- Email: 1765413309@qq.com
+- QQ:  1765413309
