@@ -40,11 +40,12 @@
 - 验证网络连接和防火墙设置
 - 检查 API 端点是否正确
 
-### 5. Hugging Face 模型加载失败
+### 5. ModelScope 模型加载失败
 
 **问题**：`RuntimeError: 重排序模型加载失败: [Errno 2] No such file or directory`
 
 **解决方法**：
+
 - 检查 `.env` 文件中的 `RERANKER_MODEL_PATH` 是否正确
 - 确保模型文件完整下载
 - 检查文件权限
@@ -93,6 +94,7 @@
 **问题**：无法获取会话历史或会话被意外删除
 
 **解决方法**：
+
 - 检查数据库连接是否正常
 - 验证用户权限是否正确
 - 检查会话 ID 是否正确
@@ -160,4 +162,4 @@ echo $DASHSCOPE_API_KEY
 3. 操作系统和 Python 版本
 4. 复现步骤
 
-可以通过项目 GitHub Issues 或联系维护人员获取帮助。
+可以在 [GitHub Issues](https://github.com/zzys-cmd/Rag-notebook/issues) 提交问题，附上上述信息能更快定位。
