@@ -6,6 +6,7 @@ from typing import List, Optional, AsyncGenerator
 
 from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
 from langchain_community.chat_models import ChatTongyi
+from langchain_ollama import ChatOllama
 from langchain_core.messages import BaseMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import BaseTool
@@ -69,17 +70,39 @@ class AgentFactory:
         return load_prompt('main_prompt')
 
     def _create_chat_model(self, custom_model: Optional[str] = None):
-        """内部方法：创建聊天模型实例"""
-        # 使用阿里云DashScope
-        api_key = os.getenv("ALIYUN_ACCESS_KEY_SECRET")
-        base_url = os.getenv("ALIYUN_BASE_URL")
+        """内部方法：根据LLM_TYPE创建聊天模型实例"""
+        llm_type = os.getenv("LLM_TYPE", "ALIYUN").upper()
         
-        return ChatTongyi(
-            model=custom_model or self.model,
-            api_key=api_key,
-            streaming=True,
-            top_p=0.7,
-        )
+        if llm_type == "OLLAMA":
+            model_name = custom_model or os.getenv("OLLAMA_MODEL_NAME", self.model)
+            base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+            
+            logger.info(f"🤖 Agent使用Ollama模型: {model_name}")
+            
+            return ChatOllama(
+                model=model_name,
+                base_url=base_url,
+                streaming=True,
+                top_p=0.7,
+            )
+        
+        elif llm_type == "ALIYUN":
+            api_key = os.getenv("ALIYUN_ACCESS_KEY_SECRET")
+            base_url = os.getenv("ALIYUN_BASE_URL")
+            model_name = custom_model or os.getenv("ALIYUN_MODEL_NAME", self.model)
+            
+            logger.info(f"🤖 Agent使用阿里云百炼模型: {model_name}")
+            
+            return ChatTongyi(
+                model=model_name,
+                api_key=api_key,
+                base_url=base_url,
+                streaming=True,
+                top_p=0.7,
+            )
+        
+        else:
+            raise ValueError(f"不支持的LLM_TYPE: {llm_type}，可选值: ALIYUN, OLLAMA")
 
     def _create_prompt(self, custom_system_prompt: Optional[str] = None) -> ChatPromptTemplate:
         """内部方法：创建提示词模板"""
