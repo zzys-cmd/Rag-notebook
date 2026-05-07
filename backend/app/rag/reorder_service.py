@@ -3,38 +3,52 @@ import torch
 import os
 from dotenv import load_dotenv
 from sentence_transformers import CrossEncoder
+from modelscope import snapshot_download
+from tqdm import tqdm
 from app.core.logger_handler import logger
 
 # 加载环境变量
 load_dotenv()
 
 
+def find_model_path(base_path: str) -> str:
+    if os.path.exists(os.path.join(base_path, 'config.json')):
+        return base_path
+    
+    for root, dirs, files in os.walk(base_path):
+        if 'config.json' in files:
+            return root
+    
+    logger.info(f"✅ 模型路径：{base_path}")
+    logger.info(f"✅ 模型路径：{root}")
+    return base_path
+
+
 def check_and_download_reranker_model() -> None:
     """检查并重排序模型，在FastAPI启动时执行"""
     LOCAL_MODEL_PATH = os.getenv("RERANKER_MODEL_PATH", r"D:\Hugging_Face\models\Qwen3-Reranker-0.6B")
-    HF_MODEL_NAME = "Qwen/Qwen3-Reranker-0.6B"
-    
+    MODELSCOPE_MODEL_NAME = "Qwen/Qwen3-Reranker-0.6B"
+
     try:
-        # 检查本地模型是否存在
         if os.path.exists(LOCAL_MODEL_PATH) and os.path.isdir(LOCAL_MODEL_PATH):
             logger.info(f"✅ 检测到本地重排序模型：{LOCAL_MODEL_PATH}")
         else:
             logger.warning(f"⚠️  本地模型未找到：{LOCAL_MODEL_PATH}")
-            logger.info(f"🔄 开始自动下载模型：{HF_MODEL_NAME}")
-            
-            # 创建模型目录
+            logger.info(f"🔄 开始从魔搭社区下载模型：{MODELSCOPE_MODEL_NAME}")
+
             os.makedirs(LOCAL_MODEL_PATH, exist_ok=True)
-            
-            # 自动下载模型
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-            model = CrossEncoder(
-                HF_MODEL_NAME,
-                max_length=512,
-                device=device,
-                cache_folder=LOCAL_MODEL_PATH
-            )
-            logger.info(f"✅ 模型下载完成，使用设备：{device}")
-            
+
+            with tqdm(total=100, desc='下载模型', leave=True, bar_format='{l_bar}{bar}| {n_fmt}%') as pbar:
+                pbar.update(10)
+                snapshot_download(
+                    model_id=MODELSCOPE_MODEL_NAME,
+                    cache_dir=LOCAL_MODEL_PATH,
+                    revision='master'
+                )
+                pbar.update(90)
+
+            logger.info(f"✅ 模型下载完成，保存路径：{LOCAL_MODEL_PATH}")
+
     except Exception as e:
         logger.error(f"❌ 模型检查失败: {str(e)}")
         raise RuntimeError(f"重排序模型检查失败: {str(e)}")
@@ -44,26 +58,22 @@ class ReorderService:
     """文档重排序服务"""
     
     def __init__(self):
-        # 从环境变量读取重排序模型路径
         self.LOCAL_MODEL_PATH = os.getenv("RERANKER_MODEL_PATH", r"D:\Hugging_Face\models\Qwen3-Reranker-0.6B")
-        # Hugging Face模型名称
-        self.HF_MODEL_NAME = "Qwen/Qwen3-Reranker-0.6B"
-        # 自动选择设备（优先使用GPU）
+        self.MODELSCOPE_MODEL_NAME = "Qwen/Qwen3-Reranker-0.6B"
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        # 模型实例（懒加载）
         self._model = None
     
     async def _get_model(self):
         """懒加载模型实例"""
         if self._model is None:
-            logger.info(f"✅ 加载重排序模型：{self.LOCAL_MODEL_PATH}")
+            actual_model_path = find_model_path(self.LOCAL_MODEL_PATH)
+            logger.info(f"✅ 加载重排序模型：{actual_model_path}")
             self._model = CrossEncoder(
-                self.LOCAL_MODEL_PATH,
+                actual_model_path,
                 max_length=512,
                 device=self.device,
                 local_files_only=True
             )
-            # 强制使用评估模式，避免训练模式下的随机性
             self._model.eval()
             logger.info(f"✅ 模型加载成功，使用设备：{self.device}")
         return self._model
