@@ -207,9 +207,9 @@ CELERY_RESULT_EXPIRES=YOUR_CELERY_RESULT_EXPIRES
 REDIS_CACHE_URL=YOUR_REDIS_CACHE_URL
 ```
 
-### Hugging Face 模型配置
+### ModelScope 模型配置
 
-详细的模型下载和配置说明请参考：[Hugging Face 模型配置](./docs/huggingface_model.md)
+详细的模型下载和配置说明请参考：[ModelScope 模型配置](./docs/huggingface_model.md)
 
 #### 模型配置
 修改 `backend/app/config/rag.yaml` 文件：
@@ -439,7 +439,7 @@ separators: ["\n\n", "\n", "。", "！", "？", "!", "?", " ", ""]
 
 项目文档位于 `docs/` 目录：
 
-- **[Hugging Face 模型配置](./docs/huggingface_model.md)**：详细的模型下载和配置说明
+- **[ModelScope 模型配置](./docs/huggingface_model.md)**：详细的模型下载和配置说明
 - **[部署指南](./docs/deployment.md)**：生产环境部署详细步骤
 - **[故障排除](./docs/troubleshooting.md)**：常见问题和解决方案
 - **[API 文档](./backend/api.md)**：后端 API 接口文档

@@ -1,4 +1,4 @@
-# Hugging Face 模型下载配置
+# ModelScope 模型下载配置
 
 ## 模型介绍
 
@@ -25,7 +25,7 @@ uv add sentence-transformers torch
 
 系统支持自动检测和下载模型。当FastAPI服务器启动时：
 1. 自动检查配置的模型路径是否存在
-2. 如果不存在，自动从Hugging Face下载模型到指定路径
+2. 如果不存在，自动从`ModelScope`下载模型到指定路径
 3. 下载完成后在第一次使用时自动加载
 
 **无需手动下载**，系统会在服务器启动时自动完成检查和下载。
@@ -33,7 +33,7 @@ uv add sentence-transformers torch
 #### 方法二：手动从Hugging Face下载
 
 如果需要手动下载：
-1. 访问模型页面：[Qwen/Qwen3-Reranker-0.6B](https://huggingface.co/Qwen/Qwen3-Reranker-0.6B)
+1. 访问模型页面：[千问3-Reranker-0.6B · 模型库](https://www.modelscope.cn/models/Qwen/Qwen3-Reranker-0.6B)
 2. 下载完整模型文件到本地目录，推荐路径：
    ```
    D:\Hugging_Face\models\Qwen3-Reranker-0.6B
