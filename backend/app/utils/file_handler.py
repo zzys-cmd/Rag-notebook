@@ -134,3 +134,104 @@ async def ppt_loader(file_path: str) -> list[Document]:
     except Exception as e:
         logger.error(f"【PPT文件加载】加载文件 {abs_file_path} 时出错: {e}")
         return []
+
+
+def get_file_md5_hex_sync(file_path: str) -> str:
+    """同步获取文件的md5值（用于多线程场景）"""
+    abs_file_path = get_abstract_path(file_path) if not os.path.isabs(file_path) else file_path
+    
+    if not os.path.exists(abs_file_path):
+        logger.error(f"【md5计算】文件路径 {abs_file_path} 不存在")
+        return ""
+
+    if not os.path.isfile(abs_file_path):
+        logger.error(f"【md5计算】文件路径 {abs_file_path} 不是文件")
+        return ""
+
+    md5_object = hashlib.md5()
+    chunk_size = 1024
+    try:
+        with open(abs_file_path, "rb") as f:
+            while chunk := f.read(chunk_size):
+                md5_object.update(chunk)
+    except Exception as e:
+        logger.error(f"【md5计算】读取文件 {abs_file_path} 时出错: {e}")
+        return ""
+
+    return md5_object.hexdigest()
+
+
+def pdf_loader_sync(file_path: str, password: str = None) -> list[Document]:
+    """
+    同步加载PDF文件内容（用于多线程场景）
+    :param file_path: PDF文件路径
+    :param password: PDF密码（如果有）
+    :return: PDF文件内容
+    """
+    abs_file_path = get_abstract_path(file_path) if not os.path.isabs(file_path) else file_path
+    loader = PyPDFLoader(abs_file_path, password=password)
+    return loader.load()
+
+
+def txt_loader_sync(file_path: str) -> list[Document]:
+    """
+    同步加载TXT文件内容（用于多线程场景）
+    :param file_path: TXT文件路径
+    :return: TXT文件内容
+    """
+    abs_file_path = get_abstract_path(file_path) if not os.path.isabs(file_path) else file_path
+    
+    encodings = ['utf-8', 'gbk']
+    for encoding in encodings:
+        try:
+            loader = TextLoader(abs_file_path, encoding=encoding)
+            return loader.load()
+        except Exception as e:
+            logger.error(f"【文本文件加载】使用编码 {encoding} 加载文件 {abs_file_path} 时出错: {e}")
+            continue
+    return []
+
+
+def word_loader_sync(file_path: str) -> list[Document]:
+    """
+    同步加载WORD文件内容（用于多线程场景）
+    :param file_path: WORD文件路径
+    :return: WORD文件内容
+    """
+    abs_file_path = get_abstract_path(file_path) if not os.path.isabs(file_path) else file_path
+    try:
+        loader = TextLoader(abs_file_path, encoding='utf-8')
+        return loader.load()
+    except Exception as e:
+        logger.error(f"【WORD文件加载】加载文件 {abs_file_path} 时出错: {e}")
+        return []
+
+
+def markdown_loader_sync(file_path: str) -> list[Document]:
+    """
+    同步加载Markdown文件内容（用于多线程场景）
+    :param file_path: Markdown文件路径
+    :return: Markdown文件内容
+    """
+    abs_file_path = get_abstract_path(file_path) if not os.path.isabs(file_path) else file_path
+    try:
+        loader = UnstructuredMarkdownLoader(abs_file_path, mode="single")
+        return loader.load()
+    except Exception as e:
+        logger.error(f"【Markdown文件加载】加载文件 {abs_file_path} 时出错: {e}")
+        return []
+
+
+def ppt_loader_sync(file_path: str) -> list[Document]:
+    """
+    同步加载PPT/PPTX文件内容（用于多线程场景）
+    :param file_path: PPT文件路径
+    :return: PPT文件内容
+    """
+    abs_file_path = get_abstract_path(file_path) if not os.path.isabs(file_path) else file_path
+    try:
+        loader = UnstructuredPowerPointLoader(abs_file_path, mode="single")
+        return loader.load()
+    except Exception as e:
+        logger.error(f"【PPT文件加载】加载文件 {abs_file_path} 时出错: {e}")
+        return []
