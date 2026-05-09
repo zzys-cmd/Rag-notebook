@@ -11,12 +11,6 @@
         <van-cell :title="$t('settings.themeCustomization')" is-link @click="showThemePopup = true" />
         <van-cell :title="$t('settings.languageSettings')" is-link @click="showLanguagePopup = true" />
       </van-cell-group>
-      
-      <van-cell-group inset :title="$t('settings.account')">
-        <van-cell :title="$t('settings.privacySettings')" is-link />
-        <van-cell :title="$t('settings.notificationSettings')" is-link />
-        <van-cell :title="$t('settings.aboutUs')" is-link />
-      </van-cell-group>
     </div>
     
     <!-- 主题选择弹出层 -->
