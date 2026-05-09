@@ -2,6 +2,20 @@ from pydantic import BaseModel
 from typing import List, Tuple, Optional
 
 
+class UploadProgress(BaseModel):
+    """文件上传进度响应模型"""
+    event_type: str
+    file_index: Optional[int] = None
+    total_files: Optional[int] = None
+    filename: Optional[str] = None
+    step: Optional[str] = None
+    message: Optional[str] = None
+    progress: Optional[int] = None
+    success_count: Optional[int] = None
+    failed_count: Optional[int] = None
+    error_message: Optional[str] = None
+
+
 class QueryRequest(BaseModel):
     """查询请求模型"""
     session_id: Optional[str] = None
@@ -48,3 +62,59 @@ class ReorderRequest(BaseModel):
 class ReorderResponse(BaseModel):
     """重排序响应模型"""
     documents: List[dict]
+
+
+class KnowledgeDocument(BaseModel):
+    """知识库文档信息模型"""
+    id: str
+    filename: str
+    original_filename: Optional[str] = None
+    user_id: Optional[str] = None
+    chunk_count: int
+    preview: str
+    created_at: Optional[str] = None
+
+
+class KnowledgeListResponse(BaseModel):
+    """知识库文档列表响应模型"""
+    documents: List[KnowledgeDocument]
+    total_count: int
+
+
+class KnowledgeDocumentDetail(BaseModel):
+    """知识库文档详情响应模型"""
+    id: str
+    filename: str
+    user_id: Optional[str] = None
+    chunk_count: int
+    content: str
+    created_at: Optional[str] = None
+
+
+class ChunkInfo(BaseModel):
+    """文档切片信息模型"""
+    chunk_id: str
+    index: int
+    content: str
+    metadata: dict
+
+
+class DocumentChunksResponse(BaseModel):
+    """文档切片列表响应模型"""
+    filename: str
+    total_chunks: int
+    chunks: List[ChunkInfo]
+
+
+class MD5Record(BaseModel):
+    """MD5记录模型"""
+    md5: str
+    filename: Optional[str] = None
+    original_filename: Optional[str] = None
+    upload_time: Optional[str] = None
+
+
+class MD5ListResponse(BaseModel):
+    """MD5记录列表响应模型"""
+    records: List[MD5Record]
+    total_count: int
