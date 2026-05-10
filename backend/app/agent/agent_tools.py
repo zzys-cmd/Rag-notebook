@@ -1,4 +1,5 @@
 from typing import List
+from contextvars import ContextVar
 
 from langchain_core.tools import tool
 
@@ -9,18 +10,30 @@ from app.utils.auth_utils import decode_django_jwt
 
 import datetime
 
+current_user_id_var: ContextVar[str] = ContextVar('current_user_id', default=None)
+
+def set_current_user_id(user_id: str):
+    """设置当前用户ID到上下文"""
+    current_user_id_var.set(user_id)
+
+def get_current_user_id_from_context() -> str:
+    """从上下文获取当前用户ID"""
+    return current_user_id_var.get()
+
 @tool(description="用于从向量数据库里检索文档并生成摘要，返回包含文档列表和摘要的结果。返回格式为：'摘要: [摘要内容]\n\n检索到的文档列表:\n1. [文档1内容]\n2. [文档2内容]\n...'。注意：文档已经过自动重排序，无需再调用重排序工具")
-async def rag_summary_tools(query: str) -> str:
+async def rag_summary_tools(query: str, user_id: str = None) -> str:
     """RAG 摘要工具"""
-    result = await RagService().get_documents_and_summary(query)
+    effective_user_id = user_id or get_current_user_id_from_context()
+    if not effective_user_id:
+        return "错误: 无法确定用户身份，请提供有效的user_id"
+    result = await RagService(effective_user_id).get_documents_and_summary(query)
     documents = result.get("documents", [])
     summary = result.get("summary", "")
 
-    # 格式化返回结果
     formatted_result = f"摘要: {summary}\n\n"
     formatted_result += "检索到的文档列表（已重排序）:\n"
     for i, doc in enumerate(documents, 1):
-        formatted_result += f"{i}. {doc}\n"  # 显示完整文档内容
+        formatted_result += f"{i}. {doc}\n"
 
     return formatted_result
 

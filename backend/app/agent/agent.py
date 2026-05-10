@@ -13,7 +13,7 @@ from langchain_core.tools import BaseTool
 
 from app.agent.agent_middleware import get_middleware
 from app.agent.agent_tools import rag_summary_tools, get_weather_tools, what_time_is_now, get_user_info_tools, \
-    reorder_documents_tools
+    reorder_documents_tools, set_current_user_id
 from app.core.logger_handler import logger
 from app.services import session_manager as sm
 from app.utils.prompt_loader import load_prompt
@@ -168,6 +168,7 @@ def get_agent_executor():
 async def get_agent_response(
         query: str,
         history: Optional[List[tuple]] = None,
+        user_id: Optional[str] = None,
         custom_tools: Optional[List[BaseTool]] = None,
         **kwargs
 ):
@@ -175,10 +176,14 @@ async def get_agent_response(
     获取 Agent 响应（使用工厂创建实例）
     :param query: 用户查询
     :param history: 会话历史 [(user_msg, assistant_msg), ...]
+    :param user_id: 用户ID
     :param custom_tools: 自定义工具（可选，用于动态切换工具）
     :param kwargs: 其他工厂参数
     :return: 响应结果
     """
+    if user_id:
+        set_current_user_id(user_id)
+
     try:
         # 1. 从工厂获取全新的 Executor 实例
         agent_executor = agent_factory.create_agent_executor(custom_tools=custom_tools, **kwargs)
@@ -247,6 +252,8 @@ async def get_agent_stream_response(
     """
     try:
         logger.info(f"【Agent流式响应】开始处理请求，用户ID: {user_id}, 会话ID: {session_id}, 查询: {query}")
+
+        set_current_user_id(user_id)
 
         # 获取会话历史
         history = await sm.session_manager.get_history(session_id, user_id)
