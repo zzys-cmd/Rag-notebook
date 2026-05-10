@@ -281,7 +281,7 @@ const uploadFiles = async () => {
   });
 
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/vector/add/multiple/stream', {
+    const response = await fetch('/knowledge/add/multiple/stream', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -375,7 +375,7 @@ const fetchDocuments = async () => {
 
   loadingDocuments.value = true;
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/vector/list', {
+    const response = await fetch('/knowledge/list', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -406,7 +406,7 @@ const fetchDocumentDetail = async (filename) => {
 
   loadingDetail.value = true;
   try {
-    const response = await fetch(`http://127.0.0.1:8000/api/vector/detail?filename=${encodeURIComponent(filename)}`, {
+    const response = await fetch(`/knowledge/detail?filename=${encodeURIComponent(filename)}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -439,7 +439,7 @@ const fetchDocumentChunks = async (filename) => {
   chunks.value = [];
   totalChunks.value = 0;
   try {
-    const response = await fetch(`http://127.0.0.1:8000/api/vector/chunks?filename=${encodeURIComponent(filename)}`, {
+    const response = await fetch(`/knowledge/chunks?filename=${encodeURIComponent(filename)}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -476,7 +476,7 @@ const deleteDocumentByFilename = async (filename) => {
       delete_documents: 'true',
     });
     const response = await fetch(
-      `http://127.0.0.1:8000/api/vector/delete/filename?${qs.toString()}`,
+      `/knowledge/delete/filename?${qs.toString()}`,
       {
         method: 'DELETE',
         headers: {
@@ -526,7 +526,7 @@ const cleanAllVectors = async () => {
   }
 
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/vector/clean', {
+    const response = await fetch('/knowledge/clean', {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
