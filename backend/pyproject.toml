@@ -41,6 +41,7 @@ dependencies = [
     "unstructured[all-docs]>=0.22.20",
     "langsmith>=0.7.22",
     "langgraph-cli[inmem]>=0.1.54",
+    "rank-bm25>=0.2.2",
 ]
 
 # 开发依赖
