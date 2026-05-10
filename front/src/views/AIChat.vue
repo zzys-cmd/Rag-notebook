@@ -158,7 +158,7 @@ const sendMessage = async () => {
 const fetchAIResponse = async (userMessage) => {
   try {
     // 确保使用正确的相对路径，通过Vite代理访问
-    const url = '/api/agent/query/stream';
+    const url = '/chat/agent/query/stream';
     // 从localStorage获取token
     const token = localStorage.getItem('jwt_token') || userStore.token;
     // console.log('发送AI请求到:', url);
