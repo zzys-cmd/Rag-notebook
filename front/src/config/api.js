@@ -22,24 +22,24 @@ export const apiConfig = {
     uploadFile: '/file/upload/',
     
     // AI对话相关
-    agentQuery: '/api/agent/query',
-    agentQueryStream: '/api/agent/query/stream',
-    
+    agentQuery: '/chat/agent/query/stream',
+    agentQueryStream: '/chat/agent/query/stream',
+
     // RAG相关
-    ragQuery: '/api/rag/query',
-    
+    ragQuery: '/chat/rag/query',
+
     // 会话管理
-    getSession: '/api/session/',
-    deleteSession: '/api/session/',
-    getAllSessions: '/api/sessions',
-    getUserSessions: '/api/sessions',
-    
+    getSession: '/chat/session/',
+    deleteSession: '/chat/session/',
+    getAllSessions: '/chat/sessions',
+    getUserSessions: '/chat/sessions',
+
     // 向量数据库
-    uploadSingleFile: '/api/vector/add/single',
-    uploadMultipleFiles: '/api/vector/add/multiple',
-    cleanVectors: '/api/vector/clean',
-    
+    uploadSingleFile: '/knowledge/add/single',
+    uploadMultipleFiles: '/knowledge/add/multiple',
+    cleanVectors: '/knowledge/clean',
+
     // 文档重排序
-    reorderDocuments: '/api/reorder'
+    reorderDocuments: '/chat/reorder'
   }
 }
