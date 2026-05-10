@@ -11,9 +11,10 @@ from app.core.logger_handler import logger
 
 
 class RagService:
-    def __init__(self):
+    def __init__(self, user_id: str = None):
         self.vector_store = VectorStoreService()
-        self.retriever = None  # 延迟初始化
+        self.retriever = None
+        self.user_id = user_id
         self.prompt_text = load_prompt(prompt_type="rag_summary_prompt")
         self.prompt_template = PromptTemplate.from_template(self.prompt_text)
         self.chat_model = chat_model
@@ -26,7 +27,7 @@ class RagService:
         :param query: 查询语句，用于动态调整权重
         """
         if self.retriever is None:
-            self.retriever = await self.vector_store.get_retriever(query)
+            self.retriever = await self.vector_store.get_retriever(query, self.user_id)
 
 
     def _init_chain(self):
@@ -61,6 +62,10 @@ class RagService:
     @traceable
     async def retrieve_document(self, query: str) -> list:
         """使用HyDE技术 从向量数据库里检索文档"""
+        if not self.user_id:
+            logger.warning(f"【HyDE】user_id为空，不进行任何检索")
+            return []
+        
         try:
             # 确保检索器已初始化，传递query参数
             if self.retriever is None:
@@ -105,6 +110,13 @@ class RagService:
         :param query: 查询语句
         :return: 包含文档列表和摘要的字典
         """
+        if not self.user_id:
+            logger.warning(f"【RAG】user_id为空，不返回任何文档")
+            return {
+                "documents": [],
+                "summary": "抱歉，我没有找到相关的信息。"
+            }
+        
         try:
             documents = await self.retrieve_document(query)
 
