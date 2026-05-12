@@ -336,9 +336,9 @@ separators: ["\n\n", "\n", "。", "！", "？", "!", "?", " ", ""]
 
 项目文档位于 `docs/` 目录：
 
-- **[ModelScope 模型配置](./docs/huggingface_model.md)**：详细的模型下载和配置说明
+- **[ModelScope 模型配置](./docs/modelscope_model.md)**：详细的模型下载和配置说明
 - **[故障排除](./docs/troubleshooting.md)**：常见问题和解决方案
-- **[API 文档](./backend/api.md)**：后端 API 接口文档
+- **[API 文档](./backend/openapi.json)**：后端 API 接口文档
 - **[用户服务 API](./DjangoUserService/api.md)**：用户服务 API 文档
 
 ## Star History
