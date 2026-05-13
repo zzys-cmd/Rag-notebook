@@ -210,6 +210,15 @@ CELERY_RESULT_EXPIRES=3600
 REDIS_CACHE_URL=redis://localhost:6379/1
 ```
 
+配置好env文件后，我们需要执行Django ORM的迁移命令来迁移数据库表：
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+
+
 ### 向量数据库配置
 
 修改 `backend/app/config/chroma.yaml` 文件：
