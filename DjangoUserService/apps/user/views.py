@@ -58,8 +58,10 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data.get('user')  # 从序列化器中获取用户对象
-            user.last_login = datetime.now()  # 更新用户最后登录时间
-            user.save()  # 保存用户对象
+            # 检查用户是否是临时测试用户（SimpleNamespace类型）
+            if hasattr(user, 'save') and callable(user.save):
+                user.last_login = datetime.now()  # 更新用户最后登录时间
+                user.save()  # 保存用户对象
             # 生成JWT token - 正确处理返回的元组
             token, expire_time = jwttoken.generate_token(user)
             return Response({"message": f"{user.username} 登录成功", "user": UserSerializer(user).data, "token": token}, status=status.HTTP_200_OK)
