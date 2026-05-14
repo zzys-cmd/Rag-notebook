@@ -43,6 +43,12 @@
           </van-button>
         </div>
         
+        <div class="test-user-btn">
+          <van-button round block type="default" size="large" @click="loginTestUser">
+            测试用户登录
+          </van-button>
+        </div>
+        
         <div class="register-link">
           还没有账号？<span @click="goToRegister">去注册</span>
         </div>
@@ -106,6 +112,11 @@ const onClickLeft = () => {
 
 const goToRegister = () => {
   router.push('/register');
+};
+
+const loginTestUser = () => {
+  username.value = 'test';
+  password.value = '666666';
 };
 </script>
 
