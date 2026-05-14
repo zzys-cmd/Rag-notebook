@@ -1,9 +1,22 @@
-import os, hashlib, aiofiles, asyncio
+import os, hashlib, aiofiles, asyncio, sys
 from langchain_core.documents import Document
 
 from app.core.logger_handler import logger
 from app.utils.path_tool import get_abstract_path
-from langchain_community.document_loaders import PyPDFLoader, TextLoader, UnstructuredMarkdownLoader, UnstructuredPowerPointLoader
+from langchain_community.document_loaders import PyPDFLoader, TextLoader, UnstructuredPDFLoader, UnstructuredMarkdownLoader, UnstructuredPowerPointLoader
+
+class FontBBoxStreamFilter:
+    def __init__(self, stream):
+        self.stream = stream
+        
+    def write(self, data):
+        if 'FontBBox from font descriptor' not in data:
+            self.stream.write(data)
+            
+    def flush(self):
+        self.stream.flush()
+
+sys.stderr = FontBBoxStreamFilter(sys.stderr)
 
 async def get_file_md5_hex(file_path: str) -> str:
     """获取文件的md5值"""
@@ -60,14 +73,26 @@ async def listdir_allowed_type(path: str, allowed_types: tuple[str]) -> tuple:
 
 async def pdf_loader(file_path: str, password: str = None) -> list[Document]:
     """
-    加载PDF文件内容
+    加载PDF文件内容（支持包含图片和文字的混合PDF）
     :param file_path: PDF文件路径
     :param password: PDF密码（如果有）
     :return: PDF文件内容
     """
-    # 处理路径，确保使用绝对路径
     abs_file_path = get_abstract_path(file_path) if not os.path.isabs(file_path) else file_path
-    loader = PyPDFLoader(abs_file_path, password=password)
+    
+    if password:
+        loader = PyPDFLoader(abs_file_path, password=password)
+        return await asyncio.to_thread(loader.load)
+    
+    try:
+        loader = UnstructuredPDFLoader(abs_file_path)
+        docs = await asyncio.to_thread(loader.load)
+        if docs and any(len(doc.page_content.strip()) > 0 for doc in docs):
+            return docs
+    except Exception as e:
+        logger.warning(f"【PDF加载】UnstructuredPDFLoader失败，尝试PyPDFLoader: {e}")
+    
+    loader = PyPDFLoader(abs_file_path)
     return await asyncio.to_thread(loader.load)
 
 
@@ -163,13 +188,26 @@ def get_file_md5_hex_sync(file_path: str) -> str:
 
 def pdf_loader_sync(file_path: str, password: str = None) -> list[Document]:
     """
-    同步加载PDF文件内容（用于多线程场景）
+    同步加载PDF文件内容（用于多线程场景，支持包含图片和文字的混合PDF）
     :param file_path: PDF文件路径
     :param password: PDF密码（如果有）
     :return: PDF文件内容
     """
     abs_file_path = get_abstract_path(file_path) if not os.path.isabs(file_path) else file_path
-    loader = PyPDFLoader(abs_file_path, password=password)
+    
+    if password:
+        loader = PyPDFLoader(abs_file_path, password=password)
+        return loader.load()
+    
+    try:
+        loader = UnstructuredPDFLoader(abs_file_path)
+        docs = loader.load()
+        if docs and any(len(doc.page_content.strip()) > 0 for doc in docs):
+            return docs
+    except Exception as e:
+        logger.warning(f"【PDF加载】UnstructuredPDFLoader失败，尝试PyPDFLoader: {e}")
+    
+    loader = PyPDFLoader(abs_file_path)
     return loader.load()
 
 
