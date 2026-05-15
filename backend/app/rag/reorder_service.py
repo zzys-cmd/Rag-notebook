@@ -83,11 +83,12 @@ class ReorderService:
         """获取模型实例（懒加载）"""
         return await self._get_model()
     
-    async def reorder_documents(self, query: str, documents: List[str]) -> Dict[str, Any]:
+    async def reorder_documents(self, query: str, documents: List[str], thinking_callback=None) -> Dict[str, Any]:
         """
         对文档进行重排序
         :param query: 查询语句
         :param documents: 文档列表
+        :param thinking_callback: 思考过程回调函数
         :return: 包含重排序结果的字典，格式为：
                  {"success": bool, "documents": List[Dict], "error": str}
         """
@@ -98,6 +99,13 @@ class ReorderService:
                     "documents": [],
                     "error": ""
                 }
+            
+            if thinking_callback:
+                await thinking_callback({
+                    "type": "thinking",
+                    "stage": "reorder",
+                    "content": f"正在计算 {len(documents)} 个文档的相关性分数..."
+                })
             
             # 构造查询+文档对
             pairs = [(query, doc) for doc in documents]
@@ -116,6 +124,23 @@ class ReorderService:
                     "similarity": float(score)
                 })
                 logger.info(f"【重排序服务】文档相似度分数: {score:.4f}")
+            
+            if thinking_callback:
+                score_details = []
+                for i, (doc, score) in enumerate(zip(documents, scores), 1):
+                    score_details.append({
+                        "index": i,
+                        "score": round(float(score), 4),
+                        "preview": doc[:100] + "..." if len(doc) > 100 else doc
+                    })
+                await thinking_callback({
+                    "type": "thinking",
+                    "stage": "reorder",
+                    "content": f"已计算完成 {len(documents)} 个文档的相关性分数，按分数降序排序",
+                    "details": {
+                        "scores": score_details
+                    }
+                })
             
             # 按相似度分数降序排序
             sorted_docs = sorted(scored_documents, key=lambda x: x["similarity"], reverse=True)
