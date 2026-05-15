@@ -13,7 +13,7 @@ from langchain_core.tools import BaseTool
 
 from app.agent.agent_middleware import get_middleware
 from app.agent.agent_tools import rag_summary_tools, get_weather_tools, what_time_is_now, get_user_info_tools, \
-    reorder_documents_tools, set_current_user_id
+    reorder_documents_tools, set_current_user_id, set_thinking_callback
 from app.core.logger_handler import logger
 from app.services import session_manager as sm
 from app.utils.prompt_loader import load_prompt
@@ -242,7 +242,7 @@ async def get_agent_stream_response(
         **kwargs
 ) -> AsyncGenerator[str, None]:
     """
-    获取 Agent 流式响应
+    获取 Agent 流式响应（包含思考过程，实时推送）
     :param query: 用户查询
     :param session_id: 会话 ID
     :param user_id: 用户 ID
@@ -250,76 +250,120 @@ async def get_agent_stream_response(
     :param kwargs: 其他参数
     :return: 流式响应生成器
     """
+    
+    thinking_queue = asyncio.Queue()
+    agent_result_holder = {"response": None, "error": None}
+    agent_done = asyncio.Event()
+    
+    async def thinking_callback(data: dict):
+        """思考过程回调函数，将事件放入队列"""
+        logger.info(f"【思考过程】{data.get('stage', 'unknown')}: {data.get('content', '')}")
+        await thinking_queue.put(data)
+    
+    async def run_agent():
+        """在独立任务中执行 Agent"""
+        try:
+            set_current_user_id(user_id)
+            set_thinking_callback(thinking_callback)
+            
+            history = await sm.session_manager.get_history(session_id, user_id)
+            logger.info(f"【Agent流式响应】获取会话历史成功，历史记录数: {len(history)}")
+            
+            chat_history: List[BaseMessage] = []
+            if history:
+                from langchain_core.messages import HumanMessage, AIMessage
+                for user_msg, assistant_msg in history:
+                    chat_history.append(HumanMessage(content=user_msg))
+                    chat_history.append(AIMessage(content=assistant_msg))
+            
+            agent_executor = agent_factory.create_agent_executor(custom_tools=custom_tools, **kwargs)
+            
+            full_response = []
+            
+            async for chunk in agent_executor.astream({
+                "input": query,
+                "chat_history": chat_history,
+                "system_prompt": agent_factory.default_system_prompt
+            }):
+                if "output" in chunk:
+                    full_response.append(chunk["output"])
+                elif "intermediate_steps" in chunk:
+                    for action, observation in chunk["intermediate_steps"]:
+                        logger.info(f"\n\n🧠 [Agent 思考] {action.log}")
+                        logger.info(f"🛠️ [调用工具] {action.tool}")
+                        logger.info(f"📥 [工具输入] {action.tool_input}")
+                        logger.info(f"📤 [工具结果] {observation}\n")
+            
+            agent_result_holder["response"] = "".join(full_response) if full_response else "抱歉，我无法理解您的请求。"
+        except Exception as e:
+            logger.error(f"【Agent流式响应】Agent执行失败: {e}", exc_info=True)
+            agent_result_holder["error"] = str(e)
+        finally:
+            agent_done.set()
+    
+    # 启动 Agent 执行任务
+    agent_task = asyncio.create_task(run_agent())
+    
     try:
         logger.info(f"【Agent流式响应】开始处理请求，用户ID: {user_id}, 会话ID: {session_id}, 查询: {query}")
 
-        set_current_user_id(user_id)
-
-        # 获取会话历史
-        history = await sm.session_manager.get_history(session_id, user_id)
-        logger.info(f"【Agent流式响应】获取会话历史成功，历史记录数: {len(history)}")
-
-        # 构建聊天历史
-        chat_history: List[BaseMessage] = []
-        if history:
-            from langchain_core.messages import HumanMessage, AIMessage
-            for user_msg, assistant_msg in history:
-                chat_history.append(HumanMessage(content=user_msg))
-                chat_history.append(AIMessage(content=assistant_msg))
-
-        # 从工厂获取全新的 Executor 实例
-        agent_executor = agent_factory.create_agent_executor(custom_tools=custom_tools, **kwargs)
-
-        # 流式执行
-        full_response = []
-        steps = []
-
         # 先发送初始响应
         yield f"data: {json.dumps({'type': 'response', 'content': '', 'session_id': session_id}, ensure_ascii=False)}\n\n"
-
-        # 使用agent_executor的astream方法获取流式响应
-        async for chunk in agent_executor.astream({
-            "input": query,
-            "chat_history": chat_history,
-            "system_prompt": agent_factory.default_system_prompt
-        }):
-            if "output" in chunk:
-                chunk_content = chunk["output"]
-                full_response.append(chunk_content)
-                
-                # 逐字发送输出，实现流式效果
-                for char in chunk_content:
-                    yield f"data: {json.dumps({'type': 'response', 'content': char}, ensure_ascii=False)}\n\n"
-                    # logger.info(f"【debug】当前字符: {char}")
-                    await asyncio.sleep(0.02)  # 控制输出速度，实现逐字打印效果
-            elif "intermediate_steps" in chunk:
-                for action, observation in chunk["intermediate_steps"]:
-                    # 记录日志
-                    logger.info(f"\n\n🧠 [Agent 思考] {action.log}")
-                    logger.info(f"🛠️ [调用工具] {action.tool}")
-                    logger.info(f"📥 [工具输入] {action.tool_input}")
-                    logger.info(f"📤 [工具结果] {observation}\n")
-                    # 收集步骤
-                    steps.append({
-                        "thought": action.log,
-                        "tool": action.tool,
-                        "tool_input": action.tool_input,
-                        "tool_output": observation
-                    })
-
-        response = "".join(full_response) if full_response else "抱歉，我无法理解您的请求。"
-
+        
+        # 持续监听队列并实时推送思考事件，同时等待 Agent 完成
+        while not agent_done.is_set():
+            try:
+                # 使用短超时轮询队列，实现实时推送
+                event = await asyncio.wait_for(thinking_queue.get(), timeout=0.1)
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                thinking_queue.task_done()
+            except asyncio.TimeoutError:
+                # 超时是正常的，继续等待
+                continue
+        
+        # Agent 已完成，推送队列中剩余的所有思考事件
+        while not thinking_queue.empty():
+            try:
+                event = thinking_queue.get_nowait()
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                thinking_queue.task_done()
+            except asyncio.QueueEmpty:
+                break
+        
+        # 等待 agent_task 完全结束
+        await agent_task
+        
+        if agent_result_holder["error"]:
+            error_message = f"错误: {agent_result_holder['error']}"
+            yield f"data: {json.dumps({'type': 'error', 'content': error_message, 'session_id': session_id}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'done'}, ensure_ascii=False)}\n\n"
+            return
+        
+        response = agent_result_holder["response"]
+        
         # 添加到会话历史
         await sm.session_manager.add_message(session_id, user_id, query, response)
         logger.info(f"【Agent流式响应】添加到会话历史成功")
-
+        
+        # 发送回答内容
+        for char in response:
+            yield f"data: {json.dumps({'type': 'response', 'content': char}, ensure_ascii=False)}\n\n"
+            await asyncio.sleep(0.02)
+        
         # 发送结束标记
         yield f"data: {json.dumps({'type': 'done', 'session_id': session_id}, ensure_ascii=False)}\n\n"
         logger.info(f"【Agent流式响应】处理完成，会话ID: {session_id}")
+        
     except Exception as e:
         logger.error(f"【Agent流式响应】处理请求失败: {e}", exc_info=True)
-        # 发送错误信息
+        
+        # 取消 agent 任务
+        agent_task.cancel()
+        try:
+            await agent_task
+        except asyncio.CancelledError:
+            pass
+        
         error_message = f"错误: {str(e)}"
         yield f"data: {json.dumps({'type': 'error', 'content': error_message, 'session_id': session_id}, ensure_ascii=False)}\n\n"
-
         yield f"data: {json.dumps({'type': 'done'}, ensure_ascii=False)}\n\n"
