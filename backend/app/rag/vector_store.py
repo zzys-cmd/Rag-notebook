@@ -1,9 +1,5 @@
 import asyncio
-import json
 import os
-
-import aiofiles
-from aiofiles import os as aio_os
 
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
@@ -56,9 +52,6 @@ class VectorStoreService:
     def save_md5_hex_sync(self, md5_hex: str, filename: str = None, original_filename: str = None, user_id: str = None):
         self.md5_store.save_md5_hex_sync(md5_hex, filename, original_filename, user_id)
 
-    def _get_md5_store_dir(self, user_id: str = None) -> str:
-        return self.md5_store._get_md5_store_dir(user_id)
-
     async def delete_user_documents(self, user_id: str):
         """
         删除指定用户的所有文档（包括MD5记录）
@@ -84,15 +77,7 @@ class VectorStoreService:
                 )
                 logger.info(f"【向量数据库】已删除用户 {user_id} 的所有文档")
 
-            md5_dir = self._get_md5_store_dir(user_id)
-            md5_path = os.path.join(md5_dir, 'md5_hex_store.txt')
-
-            if await aio_os.path.exists(md5_path):
-                await aio_os.remove(md5_path)
-                logger.info(f"【向量数据库】已删除用户 {user_id} 的MD5记录")
-
-            if await aio_os.path.exists(md5_dir):
-                await aio_os.rmdir(md5_dir)
+            await self.md5_store.delete_user_md5(user_id)
         except Exception as e:
             logger.error(f"【向量数据库】删除用户 {user_id} 的MD5记录时出错: {e}")
 
@@ -105,57 +90,14 @@ class VectorStoreService:
         :return: 是否成功删除
         """
         try:
-            md5_dir = self._get_md5_store_dir(user_id)
-            md5_path = os.path.join(md5_dir, 'md5_hex_store.txt')
-
-            if not await aio_os.path.exists(md5_path):
-                logger.warning(f"【向量数据库】用户 {user_id} 的MD5文件不存在")
-                return False
-
-            remaining_lines = []
-            found = False
-            md5_to_delete = None
-
-            async with aiofiles.open(md5_path, 'r', encoding="utf-8") as f:
-                async for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-
-                    current_md5 = None
-                    current_filename = None
-                    if line.startswith('{'):
-                        try:
-                            data = json.loads(line)
-                            current_md5 = data.get('md5')
-                            current_filename = data.get('filename', data.get('original_filename'))
-                        except:
-                            current_md5 = line
-                    else:
-                        current_md5 = line
-
-                    if current_filename == filename:
-                        found = True
-                        md5_to_delete = current_md5
-                    else:
-                        remaining_lines.append(line)
-
-            if not found:
+            md5_to_delete = await self.md5_store.delete_by_filename(user_id, filename)
+            if md5_to_delete is None:
                 logger.warning(f"【向量数据库】文件 {filename} 不存在于用户 {user_id} 的MD5记录中")
                 return False
 
-            if len(remaining_lines) == 0:
-                await aio_os.remove(md5_path)
-                if await aio_os.path.exists(md5_dir):
-                    await aio_os.rmdir(md5_dir)
-            else:
-                async with aiofiles.open(md5_path, 'w', encoding="utf-8") as f:
-                    for line in remaining_lines:
-                        await f.write(line + '\n')
-
             logger.info(f"【向量数据库】已删除用户 {user_id} 的文件 {filename} 的MD5记录")
 
-            if delete_documents and md5_to_delete:
+            if delete_documents:
                 where_clause = {"$and": [{"user_id": user_id}, {"md5": md5_to_delete}]}
                 await asyncio.to_thread(
                     self.vectors_store.delete,
@@ -178,48 +120,10 @@ class VectorStoreService:
         :return: 是否成功删除
         """
         try:
-            md5_dir = self._get_md5_store_dir(user_id)
-            md5_path = os.path.join(md5_dir, 'md5_hex_store.txt')
-
-            if not await aio_os.path.exists(md5_path):
-                logger.warning(f"【向量数据库】用户 {user_id} 的MD5文件不存在")
-                return False
-
-            remaining_lines = []
-            found = False
-            async with aiofiles.open(md5_path, 'r', encoding="utf-8") as f:
-                async for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-
-                    current_md5 = None
-                    if line.startswith('{'):
-                        try:
-                            data = json.loads(line)
-                            current_md5 = data.get('md5')
-                        except:
-                            current_md5 = line
-                    else:
-                        current_md5 = line
-
-                    if current_md5 != md5_to_delete:
-                        remaining_lines.append(line)
-                    else:
-                        found = True
-
-            if not found:
+            success = await self.md5_store.delete_single_md5(user_id, md5_to_delete)
+            if not success:
                 logger.warning(f"【向量数据库】MD5记录 {md5_to_delete} 不存在")
                 return False
-
-            if len(remaining_lines) == 0:
-                await aio_os.remove(md5_path)
-                if await aio_os.path.exists(md5_dir):
-                    await aio_os.rmdir(md5_dir)
-            else:
-                async with aiofiles.open(md5_path, 'w', encoding="utf-8") as f:
-                    for line in remaining_lines:
-                        await f.write(line + '\n')
 
             logger.info(f"【向量数据库】已删除用户 {user_id} 的MD5记录: {md5_to_delete}")
 
@@ -245,42 +149,7 @@ class VectorStoreService:
         :return: MD5信息字典，不存在返回None
         """
         try:
-            md5_dir = self._get_md5_store_dir(user_id)
-            md5_path = os.path.join(md5_dir, 'md5_hex_store.txt')
-
-            if not await aio_os.path.exists(md5_path):
-                return None
-
-            async with aiofiles.open(md5_path, 'r', encoding="utf-8") as f:
-                async for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-
-                    if line.startswith('{'):
-                        try:
-                            data = json.loads(line)
-                            if data.get('md5') == md5_value:
-                                return data
-                        except:
-                            if line == md5_value:
-                                return {
-                                    'md5': md5_value,
-                                    'filename': None,
-                                    'original_filename': None,
-                                    'upload_time': None
-                                }
-                    else:
-                        if line == md5_value:
-                            return {
-                                'md5': md5_value,
-                                'filename': None,
-                                'original_filename': None,
-                                'upload_time': None
-                            }
-
-            return None
-
+            return await self.md5_store.get_md5_info(user_id, md5_value)
         except Exception as e:
             logger.error(f"【向量数据库】获取MD5信息 {md5_value} 时出错: {e}")
             return None
@@ -292,41 +161,9 @@ class VectorStoreService:
         :return: MD5记录列表
         """
         try:
-            md5_dir = self._get_md5_store_dir(user_id)
-            md5_path = os.path.join(md5_dir, 'md5_hex_store.txt')
-
-            if not await aio_os.path.exists(md5_path):
-                return []
-
-            records = []
-            async with aiofiles.open(md5_path, 'r', encoding="utf-8") as f:
-                async for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-
-                    if line.startswith('{'):
-                        try:
-                            data = json.loads(line)
-                            records.append(data)
-                        except:
-                            records.append({
-                                'md5': line,
-                                'filename': None,
-                                'original_filename': None,
-                                'upload_time': None
-                            })
-                    else:
-                        records.append({
-                            'md5': line,
-                            'filename': None,
-                            'original_filename': None,
-                            'upload_time': None
-                        })
-
+            records = await self.md5_store.get_all_md5_records(user_id)
             logger.info(f"【向量数据库】获取用户 {user_id} 的MD5记录，共 {len(records)} 条")
             return records
-
         except Exception as e:
             logger.error(f"【向量数据库】获取用户 {user_id} 的MD5记录时出错: {e}")
             return []
