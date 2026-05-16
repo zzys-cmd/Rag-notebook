@@ -2,20 +2,6 @@ from pydantic import BaseModel
 from typing import List, Tuple, Optional
 
 
-class UploadProgress(BaseModel):
-    """文件上传进度响应模型"""
-    event_type: str
-    file_index: Optional[int] = None
-    total_files: Optional[int] = None
-    filename: Optional[str] = None
-    step: Optional[str] = None
-    message: Optional[str] = None
-    progress: Optional[int] = None
-    success_count: Optional[int] = None
-    failed_count: Optional[int] = None
-    error_message: Optional[str] = None
-
-
 class QueryRequest(BaseModel):
     """查询请求模型"""
     session_id: Optional[str] = None
