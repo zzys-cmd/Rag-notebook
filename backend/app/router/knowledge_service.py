@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import time
 import json
 import magic
@@ -15,6 +16,7 @@ from app.rag.vector_store import VectorStoreService
 from app.rag.task_queue import TaskQueue
 from app.rag.sse_models import SSEEvent, SliceResult
 from app.utils.file_handler import get_file_md5_hex_sync
+
 
 
 ALLOWED_EXTENSIONS = {'.pdf', '.txt', '.md', '.pptx', '.docx'}
@@ -53,8 +55,11 @@ def _sync_slice_file(file_content: bytes, filename: str, file_index: int, user_i
             temp_file_path = temp_file.name
 
         try:
+            # 在加载文档之前计算 md5，因为多模态PDF加载器需要 md5 来确定图片的存储路径。
+            # 如果后移（等切片完再算），多模态加载器就无法将图片保存到正确的位置。
+            md5_hex = get_file_md5_hex_sync(temp_file_path)
             store = VectorStoreService()
-            documents = store.get_file_document_sync(temp_file_path)
+            documents = store.get_file_document_sync(temp_file_path, md5=md5_hex, user_id=user_id)
             if not documents:
                 queue.put(SliceResult.error_result(file_index=file_index, filename=filename, error="文件加载为空"))
                 return
@@ -64,7 +69,6 @@ def _sync_slice_file(file_content: bytes, filename: str, file_index: int, user_i
                 queue.put(SliceResult.error_result(file_index=file_index, filename=filename, error="切片结果为空"))
                 return
 
-            md5_hex = get_file_md5_hex_sync(temp_file_path)
             for doc in split_docs:
                 doc.metadata['user_id'] = user_id
                 doc.metadata['original_filename'] = filename
@@ -456,6 +460,41 @@ class KnowledgeService:
             raise HTTPException(status_code=404, detail=f"文档 {filename} 不存在或没有切片")
         logger.info(f"【知识库】获取文档切片: {filename}，共 {chunks['total_chunks']} 个切片")
         return chunks
+
+    async def handle_get_batch_images(self, user_id: str, md5: str) -> dict:
+        """
+        一次性读取某个文档的所有提取图片，以 base64 data URL 的形式返回。
+        这样前端可以一次请求拿到所有图片，然后根据 chunk 中的 image_paths 按需渲染，
+        避免了每个图片单独发 HTTP 请求的性能开销（尤其适合移动端或图片较多的场景）。
+        """
+        from app.utils.path_tool import get_data_path
+        image_dir = os.path.join(get_data_path(), 'extracted_images', user_id, md5)
+        if not os.path.isdir(image_dir):
+            logger.warning(f"【知识库】图片目录不存在: {image_dir}")
+            return {"md5": md5, "images": {}}
+
+        images = {}
+        try:
+            for filename in sorted(os.listdir(image_dir)):
+                filepath = os.path.join(image_dir, filename)
+                if not os.path.isfile(filepath):
+                    continue
+                _, ext = os.path.splitext(filename)
+                mime_map = {
+                    '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+                    '.tiff': 'image/tiff', '.tif': 'image/tiff',
+                    '.bmp': 'image/bmp', '.gif': 'image/gif', '.webp': 'image/webp',
+                }
+                mime = mime_map.get(ext.lower(), 'application/octet-stream')
+                with open(filepath, "rb") as f:
+                    b64 = base64.b64encode(f.read()).decode("utf-8")
+                images[filename] = f"data:{mime};base64,{b64}"
+        except Exception as e:
+            logger.error(f"【知识库】读取批量图片失败: {e}")
+            raise HTTPException(status_code=500, detail=f"读取图片失败: {e}")
+
+        logger.info(f"【知识库】读取批量图片: {md5}，共 {len(images)} 张")
+        return {"md5": md5, "images": images}
 
 
 def get_knowledge_service() -> KnowledgeService:

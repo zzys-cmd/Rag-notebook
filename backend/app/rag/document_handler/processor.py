@@ -10,6 +10,7 @@ from app.utils.config import chroma_config
 from app.utils.factory import embed_model
 from app.utils.file_handler import pdf_loader, txt_loader, listdir_allowed_type, get_file_md5_hex, markdown_loader, \
     ppt_loader, word_loader, pdf_loader_sync, txt_loader_sync, markdown_loader_sync, ppt_loader_sync, word_loader_sync
+from app.utils.pdf_multimodal_loader import pdf_multimodal_loader, pdf_multimodal_loader_sync
 from app.core.logger_handler import logger
 
 
@@ -26,11 +27,16 @@ class DocumentProcessor:
             embedding_model=embed_model
         )
 
-    async def get_file_document(self, read_path: str) -> list[Document]:
+    async def get_file_document(self, read_path: str, md5: str = None, user_id: str = None) -> list[Document]:
         """异步加载文件"""
         if read_path.endswith('.txt'):
             return await txt_loader(read_path)
         elif read_path.endswith('.pdf'):
+            # 优先使用多模态加载器（提取图片+视觉描述），仅当提供了md5和user_id时才启用；
+            # 这两个参数用于定位图片的存储路径 data/extracted_images/{user_id}/{md5}/
+            if md5 and user_id:
+                return await pdf_multimodal_loader(read_path, md5, user_id)
+            # 回退到纯文本加载器（仅提取文字，无图片）
             return await pdf_loader(read_path)
         elif read_path.endswith('.md'):
             return await markdown_loader(read_path)
@@ -41,11 +47,13 @@ class DocumentProcessor:
         else:
             return []
 
-    def get_file_document_sync(self, read_path: str) -> list[Document]:
+    def get_file_document_sync(self, read_path: str, md5: str = None, user_id: str = None) -> list[Document]:
         """同步加载文件（用于多线程场景）"""
         if read_path.endswith('.txt'):
             return txt_loader_sync(read_path)
         elif read_path.endswith('.pdf'):
+            if md5 and user_id:
+                return pdf_multimodal_loader_sync(read_path, md5, user_id)
             return pdf_loader_sync(read_path)
         elif read_path.endswith('.md'):
             return markdown_loader_sync(read_path)
@@ -116,7 +124,8 @@ class DocumentProcessor:
                     })
                 logger.info(f"【向量数据库】开始加载文档: {filename}")
 
-                document: list[Document] = await self.get_file_document(file_path)
+                # 传入 md5_hex 和 user_id 以支持多模态PDF加载（图片提取和存储路径定位）
+                document: list[Document] = await self.get_file_document(file_path, md5_hex, user_id)
                 if not document:
                     if progress_callback:
                         await progress_callback({

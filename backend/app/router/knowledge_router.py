@@ -1,13 +1,17 @@
+import os
 from typing import List
 
 from fastapi.routing import APIRouter
 from fastapi import UploadFile, File, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 
 from app.router.knowledge_service import KnowledgeService, get_knowledge_service
 
 from app.schemas.models import MD5Record, MD5ListResponse, KnowledgeListResponse, KnowledgeDocumentDetail, DocumentChunksResponse
 from app.utils.auth_utils import get_current_user_id
+# 图片相关工具：定位存储目录，构建文件路径
+from app.utils.image_extractor import get_image_storage_dir
+from app.utils.path_tool import get_data_path
 from app.core.success_response import success_response
 from app.core.rate_limit import rate_limit
 
@@ -194,3 +198,52 @@ async def get_document_chunks(
     """获取文档切片信息"""
     chunks = await knowledge_service.handle_get_document_chunks(user_id, filename)
     return success_response(data=chunks)
+
+
+# 图片服务端点：提供 PDF 中提取的原始图片的访问入口。
+# 图片本身存储在服务器文件系统中，不直接对外暴露路径，而是通过此 API 做鉴权后返回。
+# 这对安全性很重要——用户必须持有有效 JWT token 才能访问自己的图片。
+@knowledge_router.get("/image/{md5}/{filename}")
+async def serve_knowledge_image(
+        md5: str,
+        filename: str,
+        user_id: str = Depends(get_current_user_id),
+):
+    """
+    返回PDF中提取的原始图片（需JWT鉴权）
+    图片存储在 data/extracted_images/{user_id}/{md5}/{filename}
+    """
+    image_dir = get_image_storage_dir(user_id, md5)
+    image_path = os.path.join(image_dir, filename)
+
+    if not os.path.exists(image_path):
+        raise HTTPException(status_code=404, detail="图片不存在")
+
+    # 根据文件扩展名设置正确的 Content-Type，确保浏览器正确渲染图片
+    ext = os.path.splitext(filename)[1].lower()
+    media_type_map = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.tiff': 'image/tiff',
+        '.tif': 'image/tiff',
+        '.bmp': 'image/bmp',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+    }
+    media_type = media_type_map.get(ext, 'application/octet-stream')
+    return FileResponse(image_path, media_type=media_type)
+
+
+# 批量图片获取接口：一次性拿到某个文档的所有图片，前端缓存后按需展示。
+# 使用 base64 编码嵌入 JSON 中，减少前端的 HTTP 请求次数（尤其适合移动端）。
+@knowledge_router.get("/images/all/{md5}")
+async def serve_batch_images(
+        md5: str,
+        user_id: str = Depends(get_current_user_id),
+        knowledge_service: KnowledgeService = Depends(get_knowledge_service),
+        _: None = Depends(rate_limit(limit=10, window=60))
+):
+    """返回指定PDF的所有图片（单次请求，JSON + base64）"""
+    result = await knowledge_service.handle_get_batch_images(user_id, md5)
+    return success_response(data=result)
