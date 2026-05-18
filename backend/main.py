@@ -24,8 +24,11 @@ load_dotenv()
 
 app = FastAPI()
 
-# 集成限流中间件
-app.add_middleware(RateLimitMiddleware, limit=100, window=60) # 每分钟100个请求
+# 集成限流中间件（暂时注释掉，以免在调试阶段干扰正常请求）
+# RateLimitMiddleware 基于令牌桶实现，每 60 秒允许 100 个请求
+# 正式部署时可根据接口负载调整限流策略
+# 所有限流（包括路由上的 Depends(rate_limit(...))）通过 RATE_LIMIT_ENABLED=false 一键关闭
+# app.add_middleware(RateLimitMiddleware, limit=100, window=60)
 
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):

@@ -1,6 +1,13 @@
+import os
+
 from fastapi import Request, HTTPException
 
 from app.db.redis_config import connect_redis
+
+
+# 全局开关：通过环境变量 RATE_LIMIT_ENABLED 控制所有限流是否生效
+# 当设置为 false 时，rate_limit 依赖和 RateLimitMiddleware 均直接放行
+_RATE_LIMIT_ENABLED = os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"
 
 
 def rate_limit(limit: int = 1, window: int = 60):
@@ -11,6 +18,10 @@ def rate_limit(limit: int = 1, window: int = 60):
     :return: 依赖函数
     """
     async def dependency(request: Request):
+        # 全局开关关闭时直接放行，不做任何限流检查
+        if not _RATE_LIMIT_ENABLED:
+            return
+
         # 获取客户端IP
         client_ip = request.client.host
         if not client_ip:
@@ -43,6 +54,7 @@ def rate_limit(limit: int = 1, window: int = 60):
 
     return dependency
 
+
 class RateLimitMiddleware:
     """
     全局限流中间件
@@ -53,6 +65,11 @@ class RateLimitMiddleware:
         self.window = window
 
     async def __call__(self, scope, receive, send):
+        # 全局开关关闭时直接放行
+        if not _RATE_LIMIT_ENABLED:
+            await self.app(scope, receive, send)
+            return
+
         if scope['type'] != 'http':
             await self.app(scope, receive, send)
             return

@@ -116,7 +116,10 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         405: "请求方法不支持，请检查请求方式",
         429: "请求过于频繁，请稍后再试",
     }
-    friendly_msg = custom_msg_map.get(exc.status_code, exc.detail)
+    # 使用 or 替代 get(..., default) 是因为 exc.detail 可能是空字符串，
+    # 但 Python 字典的 get 默认值不会在 key 存在但 value 为 falsy 时生效。
+    # 改写成 or 后：key 不存在时返回 exc.detail，key 存在但 value 为空/falsy 时也回退到 exc.detail
+    friendly_msg = custom_msg_map.get(exc.status_code) or exc.detail
 
     logger.warning(
         f"HTTP异常: {exc.status_code} - {friendly_msg}",
