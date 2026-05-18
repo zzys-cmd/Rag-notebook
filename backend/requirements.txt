@@ -497,6 +497,8 @@ pydantic-settings==2.13.1
     #   langchain-community
 pygments==2.20.0
     # via rich
+pymupdf==1.27.2.3
+    # via backend (pyproject.toml)
 pymysql==1.1.3
     # via aiomysql
 pypandoc-binary==1.17

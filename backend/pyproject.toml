@@ -42,6 +42,9 @@ dependencies = [
     "langsmith>=0.7.22",
     "langgraph-cli[inmem]>=0.1.54",
     "rank-bm25>=0.2.2",
+    "pymupdf>=1.25.0",
+    "pillow>=10.0.0",
+    "imagehash>=4.3.0",
 ]
 
 # 开发依赖
