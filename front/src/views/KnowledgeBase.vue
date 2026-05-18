@@ -153,7 +153,21 @@
             <span>{{ currentDocument?.chunk_count }} {{ $t('knowledgebase.chunks') }}</span>
           </div>
           <div class="detail-content-full">
-            <pre>{{ currentDocument?.content || currentDocument?.preview }}</pre>
+            <!-- 文档完整文本内容 -->
+            <div class="detail-text">{{ currentDocument?.content || currentDocument?.preview }}</div>
+            <!-- 按页分组展示 PDF 提取的图片，帮助用户对照文本查看原始图片内容 -->
+            <div v-for="group in detailPageImages" :key="group.page" class="detail-page-group">
+              <div class="detail-page-label">第 {{ group.page + 1 }} 页</div>
+              <div class="detail-images">
+                <van-image
+                  v-for="(url, i) in group.urls"
+                  :key="i"
+                  :src="url"
+                  fit="contain"
+                  class="detail-image-item"
+                />
+              </div>
+            </div>
           </div>
         </template>
       </div>
@@ -177,7 +191,19 @@
             class="chunk-item"
           >
             <div class="chunk-index">{{ chunk.index + 1 }}</div>
-            <div class="chunk-content">{{ chunk.content }}</div>
+            <div class="chunk-body">
+              <div class="chunk-content">{{ chunk.content }}</div>
+              <!-- 每个切片对应的图片：通过 _imageUrls（经 base64 缓存处理后的图片URL）展示 -->
+              <div v-if="chunk._imageUrls && chunk._imageUrls.length > 0" class="chunk-images">
+                <van-image
+                  v-for="(url, idx) in chunk._imageUrls"
+                  :key="idx"
+                  :src="url"
+                  fit="contain"
+                  class="chunk-image-item"
+                />
+              </div>
+            </div>
           </div>
         </template>
       </div>
@@ -191,6 +217,8 @@ import { useRouter } from 'vue-router';
 import { showToast, showDialog } from 'vant';
 import { useI18n } from 'vue-i18n';
 import { useUserStore } from '../store/user';
+// 图片鉴权钩子：负责获取带 token 的图片URL，或通过 /images/all/{md5} 缓存全部 base64 图片
+import { useAuthImage } from '../composables/useAuthImage';
 
 const router = useRouter();
 const { t } = useI18n();
@@ -213,6 +241,31 @@ const loadingDetail = ref(false);
 const loadingChunks = ref(false);
 const chunks = ref([]);
 const totalChunks = ref(0);
+const detailPageImages = ref([]);
+
+const { getAllImages, resolveImageUrls } = useAuthImage();
+
+// 将文档详情接口返回的图片URL列表按页分组（图片命名规则：p{page}_i{index}.{ext}），
+// 然后从批量图片缓存（imageMap）中查找对应的 base64 data URL
+const groupImagesByPage = (imagePaths, imageMap) => {
+  const pageMap = {};
+  const pageOrder = [];
+
+  for (const path of imagePaths) {
+    const filename = path.split('/').pop();
+    const match = filename.match(/^p(\d+)_i/);
+    const page = match ? parseInt(match[1]) : 0;
+    const url = resolveImageUrls([path], imageMap)[0];
+    if (!url) continue;
+
+    if (!pageMap[page]) {
+      pageMap[page] = { page, urls: [] };
+      pageOrder.push(pageMap[page]);
+    }
+    pageMap[page].urls.push(url);
+  }
+  return pageOrder;
+};
 
 const showActions = ref(false);
 const documentActions = ref([
@@ -558,11 +611,30 @@ const handleCleanAll = () => {
   });
 };
 
+// 批量加载切片图片：一次请求 /images/all/{md5} 拿到所有图片的 base64 缓存，
+// 然后给每个切片的 chunk.images 转换为可直接显示的 _imageUrls
+// 这样做的目的是减少请求次数（不需要每张图片都发一次 HTTP 请求）
+const loadChunkImages = async (chunksList, md5) => {
+  if (!md5) return;
+  const imageMap = await getAllImages(md5);
+  for (const chunk of chunksList) {
+    if (chunk.images?.length) {
+      chunk._imageUrls = resolveImageUrls(chunk.images, imageMap);
+    }
+  }
+};
+
 const viewDocumentDetail = async (doc) => {
   currentDocument.value = doc;
+  detailPageImages.value = [];
+
   const detail = await fetchDocumentDetail(doc.filename);
   if (detail) {
     currentDocument.value = detail;
+    if (detail.md5 && detail.images?.length) {
+      const imageMap = await getAllImages(detail.md5);
+      detailPageImages.value = groupImagesByPage(detail.images, imageMap);
+    }
   }
   showDetail.value = true;
 };
@@ -571,6 +643,7 @@ const viewDocumentChunks = async () => {
   showDetail.value = false;
   showChunks.value = true;
   await fetchDocumentChunks(currentDocument.value.filename);
+  await loadChunkImages(chunks.value, currentDocument.value.md5);
 };
 
 const showDocumentActions = (doc) => {
@@ -583,15 +656,21 @@ const onActionSelect = async (action) => {
   
   switch (action.action) {
     case 'viewContent':
+      detailPageImages.value = [];
       const detail = await fetchDocumentDetail(currentDocument.value.filename);
       if (detail) {
         currentDocument.value = detail;
+        if (detail.md5 && detail.images?.length) {
+          const imageMap = await getAllImages(detail.md5);
+          detailPageImages.value = groupImagesByPage(detail.images, imageMap);
+        }
       }
       showDetail.value = true;
       break;
     case 'viewChunks':
       showChunks.value = true;
       await fetchDocumentChunks(currentDocument.value.filename);
+      await loadChunkImages(chunks.value, currentDocument.value.md5);
       break;
     case 'deleteDoc':
       showToast('删除功能开发中');
@@ -871,8 +950,70 @@ onMounted(() => {
   margin-right: 12px;
 }
 
-.chunk-content {
+.chunk-body {
   flex: 1;
+}
+
+.detail-chunk {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px dashed #eee;
+}
+
+.detail-chunk:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.detail-page-group {
+  margin-top: 20px;
+}
+
+.detail-page-group + .detail-page-group {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+}
+
+.detail-page-label {
+  font-size: 12px;
+  font-weight: bold;
+  color: #1989fa;
+  margin-bottom: 8px;
+}
+
+.detail-text {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #333;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.detail-images {
+  margin-top: 16px;
+}
+
+.detail-image-item {
+  width: 100%;
+  margin-bottom: 12px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.chunk-images {
+  margin-top: 8px;
+}
+
+.chunk-image-item {
+  width: 100%;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.chunk-content {
   font-size: 13px;
   line-height: 1.6;
   color: #666;
