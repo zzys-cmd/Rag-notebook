@@ -116,3 +116,7 @@ print(result)
 - 模型版本：Qwen3-Reranker-0.6B
 - sentence-transformers：2.2.0+
 - PyTorch：2.0+
+
+---
+
+[← 返回首页](../README.md)

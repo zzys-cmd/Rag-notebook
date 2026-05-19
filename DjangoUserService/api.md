@@ -346,8 +346,8 @@ curl -X POST http://127.0.0.1:8001/file/upload/ \
 
 项目集成了 Swagger 文档，可通过以下地址访问：
 
-- Swagger UI: [http://127.0.0.1:8001/docs/](http://127.0.0.1:8000/docs/)
-- ReDoc: [http://127.0.0.1:8001/redoc/](http://127.0.0.1:8000/redoc/)
+- Swagger UI: [http://127.0.0.1:8001/docs/](http://127.0.0.1:8001/docs/)
+- ReDoc: [http://127.0.0.1:8001/redoc/](http://127.0.0.1:8001/redoc/)
 
 ## 5. 认证方式
 

@@ -303,17 +303,13 @@ separators: ["\n\n", "\n", "。", "！", "？", "!", "?", " ", ""]
 
 ### FastAPI 后端 API
 
-- **[API 文档](./backend/api.md)**：详细的 API 接口文档
+- **[API 规范](./backend/openapi.json)**：后端 OpenAPI 规范文件
 - **[交互式文档](http://localhost:8000/docs)**：启动服务后访问自动生成的交互式文档
 
 ### Django 用户服务 API
 
 - **[API 文档](./DjangoUserService/api.md)**：详细的用户服务 API 文档
 - **[交互式文档](http://localhost:8001/api/)**：启动服务后访问用户服务 API 文档
-
-## 部署指南
-
-详细的部署说明请参考：[部署指南](./docs/deployment.md)
 
 ## 开发指南
 

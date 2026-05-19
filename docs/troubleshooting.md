@@ -163,3 +163,7 @@ echo $DASHSCOPE_API_KEY
 4. 复现步骤
 
 可以在 [GitHub Issues](https://github.com/zzys-cmd/Rag-notebook/issues) 提交问题，附上上述信息能更快定位。
+
+---
+
+[← 返回首页](../README.md)
