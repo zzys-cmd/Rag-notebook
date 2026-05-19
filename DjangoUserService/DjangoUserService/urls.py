@@ -45,4 +45,6 @@ urlpatterns = [
                   # Swagger文档端点
                   path('docs/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
                   path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+                  # 在空路由处直接返回redoc文档
+                  path('', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
               ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
