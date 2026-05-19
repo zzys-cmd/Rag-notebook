@@ -72,6 +72,7 @@ chromadb/
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+.opencode/
 
 # Windows
 Thumbs.db
