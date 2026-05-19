@@ -73,6 +73,7 @@ chromadb/
 .vscode/*
 !.vscode/extensions.json
 .opencode/
+.omo/
 
 # Windows
 Thumbs.db
