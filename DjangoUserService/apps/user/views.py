@@ -9,6 +9,7 @@
     - UserDetailView(get): 类视图，返回序列化后的当前用户信息
 
 """
+from drf_spectacular.utils import inline_serializer
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.views import APIView
 
@@ -20,6 +21,7 @@ from rest_framework import status
 from .fatherClass import AuthenticatedView
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from rest_framework import serializers
 
 from ..utils.cache_utils import cache_user_info, clear_user_cache
 from ..utils.rate_limit_utils import rate_limit
@@ -37,12 +39,12 @@ class LoginView(APIView):
         responses={
             200: openapi.Response(
                 description="登录成功",
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        "message": openapi.Schema(type=openapi.TYPE_STRING),
-                        "user": UserSerializer,
-                        "token": openapi.Schema(type=openapi.TYPE_STRING)
+                schema=inline_serializer(
+                    "LoginResponse",
+                    {
+                        "message": serializers.CharField(),
+                        "user": UserSerializer(),
+                        "token": serializers.CharField()
                     }
                 )
             ),
@@ -76,13 +78,13 @@ class RegisterView(APIView):
         responses={
             201: openapi.Response(
                 description="注册成功",
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        "status": openapi.Schema(type=openapi.TYPE_INTEGER),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING),
-                        "user": UserSerializer,
-                        "token": openapi.Schema(type=openapi.TYPE_STRING)
+                schema=inline_serializer(
+                    "RegisterResponse",
+                    {
+                        "status": serializers.IntegerField(),
+                        "message": serializers.CharField(),
+                        "user": UserSerializer(),
+                        "token": serializers.CharField()
                     }
                 )
             ),
@@ -281,12 +283,12 @@ class UserUpdateView(AuthenticatedView):
         responses={
             200: openapi.Response(
                 description="用户信息更新成功",
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        "message": openapi.Schema(type=openapi.TYPE_STRING),
-                        "user": UserSerializer,
-                        "token": openapi.Schema(type=openapi.TYPE_STRING)
+                schema=inline_serializer(
+                    "UserUpdateResponse",
+                    {
+                        "message": serializers.CharField(),
+                        "user": UserSerializer(),
+                        "token": serializers.CharField()
                     }
                 )
             ),
