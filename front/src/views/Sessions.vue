@@ -19,9 +19,16 @@
       </div>
       
       <div v-else-if="sessionStore.sessions.length === 0" class="empty-sessions">
-        <van-icon name="chat-o" size="64" color="#ccc" />
+        <div class="empty-icon">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <line x1="9" y1="10" x2="15" y2="10"/>
+            <line x1="12" y1="7" x2="12" y2="13"/>
+          </svg>
+        </div>
         <p>暂无会话记录</p>
-        <van-button type="primary" @click="createNewSession">
+        <p class="empty-sub">开始一段新的对话吧</p>
+        <van-button type="primary" round @click="createNewSession">
           创建新会话
         </van-button>
       </div>
@@ -38,14 +45,14 @@
             :class="{ active: sessionStore.currentSession?.session_id === session.session_id }"
           >
             <template #right-icon>
-              <van-button
-                type="danger"
-                plain
-                size="small"
-                @click.stop="deleteSession(session.session_id)"
-              >
-                删除
-              </van-button>
+              <span class="delete-btn" @click.stop="deleteSession(session.session_id)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  <line x1="10" y1="11" x2="10" y2="17"/>
+                  <line x1="14" y1="11" x2="14" y2="17"/>
+                </svg>
+              </span>
             </template>
           </van-cell>
         </van-cell-group>
@@ -232,7 +239,7 @@ const confirmNewSession = async () => {
   padding-top: 46px;
   padding-bottom: 50px;
   box-sizing: border-box;
-  background-color: #f7f8fa;
+  background-color: var(--color-bg);
 }
 
 .sessions-content {
@@ -252,12 +259,14 @@ const confirmNewSession = async () => {
   display: flex;
   align-items: center;
   gap: 8px;
+  color: var(--color-text);
 }
 
 .sessions-header h2 {
   font-size: 18px;
-  font-weight: bold;
-  color: #333;
+  font-weight: 600;
+  font-family: var(--font-heading);
+  color: var(--color-text);
   margin: 0;
 }
 
@@ -271,7 +280,7 @@ const confirmNewSession = async () => {
 
 .loading p {
   margin-top: 16px;
-  color: #666;
+  color: var(--color-text-light);
 }
 
 .empty-sessions {
@@ -280,32 +289,72 @@ const confirmNewSession = async () => {
   align-items: center;
   justify-content: center;
   height: 300px;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.empty-icon {
+  color: var(--color-text-lightest);
+  margin-bottom: 4px;
 }
 
 .empty-sessions p {
-  margin: 16px 0;
-  color: #999;
+  margin: 8px 0 4px;
+  color: var(--color-text-lighter);
+  font-size: 15px;
+}
+
+.empty-sub {
+  font-size: 13px;
+  color: var(--color-text-lightest);
+  margin-bottom: 20px !important;
 }
 
 .sessions-list {
   margin-top: 10px;
 }
 
+.sessions-list :deep(.van-cell) {
+  border-radius: 8px;
+  margin-bottom: 6px;
+  background: var(--color-card);
+  box-shadow: 0 1px 2px var(--color-shadow);
+}
+
 .active {
-  background-color: #f0f9ff !important;
+  background-color: rgba(212, 145, 74, 0.10) !important;
+  border-left: 3px solid var(--color-primary);
+}
+
+.delete-btn {
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--color-text-lighter);
+  border-radius: 4px;
+  transition: color 0.2s, background 0.2s;
+}
+
+.delete-btn:hover {
+  color: var(--color-text);
+}
+
+.delete-btn:active {
+  background: var(--color-border-light);
 }
 
 .new-session-dialog {
-  background-color: #fff;
+  background-color: var(--color-card);
   border-radius: 16px 16px 0 0;
   padding: 20px;
 }
 
 .new-session-dialog h3 {
   font-size: 18px;
-  font-weight: bold;
-  color: #333;
-  margin: 0 0 20px 0;
+  font-weight: 600;
+  font-family: var(--font-heading);
+  color: var(--color-text);
+  margin: 0 0 20px;
   text-align: center;
 }
 
@@ -313,10 +362,15 @@ const confirmNewSession = async () => {
   display: flex;
   justify-content: space-between;
   margin-top: 20px;
+  gap: 8px;
 }
 
 .dialog-buttons van-button {
   flex: 1;
-  margin: 0 5px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 </style>
