@@ -3,33 +3,28 @@
     <van-nav-bar :title="$t('my.title')" />
     <div class="user-info" @click="goToProfile" v-if="isLogin">
       <div class="avatar">
-        <van-image
-          round
-          width="80"
-          height="80"
-          :src="userInfo && userInfo.avatar ? `http://localhost:8001${userInfo.avatar}` : 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'"
-        />
+        <div v-if="userInfo && userInfo.avatar" class="avatar-img">
+          <van-image round width="72" height="72" :src="`http://localhost:8001${userInfo.avatar}`" />
+        </div>
+        <div v-else class="avatar-letter">
+          {{ (userInfo?.username || '?')[0].toUpperCase() }}
+        </div>
       </div>
       <div class="info">
-        <div class="username">{{ isLogin && userInfo ? userInfo.username : $t('my.notLoggedIn') }}</div>
-        <div class="desc" v-if="isLogin && userInfo">{{ userBio || $t('profile.bio') }}</div>
+        <div class="username">{{ userInfo?.username || $t('my.notLoggedIn') }}</div>
+        <div class="desc">{{ userBio || $t('profile.bio') }}</div>
       </div>
       <van-icon name="arrow" class="arrow-icon" />
     </div>
     <div class="user-info" v-else>
       <div class="avatar">
-        <van-image
-          round
-          width="80"
-          height="80"
-          src="https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg"
-        />
+        <div class="avatar-letter">?</div>
       </div>
       <div class="info">
         <div class="username">{{ $t('my.notLoggedIn') }}</div>
         <div class="desc">
           <van-button type="primary" size="small" @click="goToLogin" style="margin-right: 10px">{{ $t('my.goToLogin') }}</van-button>
-          <van-button type="default" size="small" @click="goToRegister">{{ $t('my.goToRegister') }}</van-button>
+          <van-button size="small" plain @click="goToRegister">{{ $t('my.goToRegister') }}</van-button>
         </div>
       </div>
     </div>
@@ -126,8 +121,8 @@ onMounted(async () => {
 .my-container {
   padding-top: 46px;
   padding-bottom: 50px;
-  background-color: var(--background-color);
-  color: var(--text-color);
+  background-color: var(--color-bg);
+  color: var(--color-text);
   min-height: 100vh;
   box-sizing: border-box;
 }
@@ -144,21 +139,38 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding: 20px 16px;
-  background-color: var(--primary-color);
-  color: #fff;
-  border-radius: 8px;
+  background: linear-gradient(135deg, var(--color-card) 0%, var(--color-surface) 100%);
+  color: var(--color-text);
+  border-radius: 12px;
   margin: 16px;
   position: relative;
+  box-shadow: 0 1px 4px var(--color-shadow);
 }
 
 .arrow-icon {
   position: absolute;
   right: 16px;
-  color: #969799;
+  color: var(--color-text-lighter);
 }
 
 .avatar {
   margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.avatar-letter {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  border: 2px solid var(--color-border);
 }
 
 .info {
@@ -167,16 +179,25 @@ onMounted(async () => {
 
 .username {
   font-size: 18px;
-  font-weight: bold;
+  font-weight: 600;
+  font-family: var(--font-heading);
   margin-bottom: 4px;
+  color: var(--color-text);
 }
 
 .desc {
   font-size: 14px;
-  color: #999;
+  color: var(--color-text-lighter);
 }
 
 .menu-list {
   margin: 0 16px;
+}
+
+.menu-list :deep(.van-cell) {
+  border-radius: 8px;
+  margin-bottom: 6px;
+  background: var(--color-card);
+  box-shadow: 0 1px 2px var(--color-shadow);
 }
 </style>

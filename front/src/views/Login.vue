@@ -9,13 +9,12 @@
     
     <div class="login-container">
       <div class="login-logo">
-        <van-image
-          width="80"
-          height="80"
-          src="https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg"
-          round
-        />
-        <h2>用户登录</h2>
+        <div class="logo-mark">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1.27A7.01 7.01 0 0 1 14 23h-4a7.01 7.01 0 0 1-6.73-5H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
+          </svg>
+        </div>
+        <h2>RAG 智能问答</h2>
       </div>
       
       <van-form @submit="onSubmit" class="login-form">
@@ -123,7 +122,7 @@ const loginTestUser = () => {
 <style scoped>
 .login-page {
   min-height: 100vh;
-  background-color: #f7f8fa;
+  background-color: var(--color-bg);
 }
 
 .login-container {
@@ -138,10 +137,24 @@ const loginTestUser = () => {
   text-align: center;
 }
 
+.logo-mark {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  color: var(--color-primary);
+  box-shadow: 0 2px 8px var(--color-shadow);
+}
+
 .login-logo h2 {
-  margin-top: 16px;
-  color: #323233;
+  font-family: var(--font-heading);
   font-size: 22px;
+  color: var(--color-text);
+  font-weight: 600;
 }
 
 .login-form {
@@ -149,29 +162,28 @@ const loginTestUser = () => {
   padding: 0 16px;
 }
 
+.login-form :deep(.van-cell-group) {
+  background: var(--color-card);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px var(--color-shadow);
+}
+
 .submit-btn {
   margin: 24px 16px;
 }
 
-.login-tips {
-  text-align: center;
-  color: #969799;
-  font-size: 14px;
-  margin-top: 16px;
-}
-
-.login-tips p {
-  margin: 8px 0;
+.test-user-btn {
+  margin: 0 16px;
 }
 
 .register-link {
   text-align: center;
   margin-top: 24px;
-  color: #969799;
+  color: var(--color-text-lighter);
   font-size: 14px;
 }
 
 .register-link span {
-  color: #1989fa;
+  color: var(--color-primary);
 }
 </style>

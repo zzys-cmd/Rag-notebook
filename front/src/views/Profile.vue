@@ -11,12 +11,12 @@
       <van-cell-group inset class="avatar-group">
         <van-cell title="头像" center is-link @click="showAvatarDialog">
           <template #right-icon>
-            <van-image
-              round
-              width="60"
-              height="60"
-              :src="userInfo?.avatar ? `http://localhost:8001${userInfo.avatar}` : 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'"
-            />
+            <div v-if="userInfo?.avatar" class="profile-avatar">
+              <van-image round width="60" height="60" :src="`http://localhost:8001${userInfo.avatar}`" />
+            </div>
+            <div v-else class="profile-avatar-letter">
+              {{ (userInfo?.username || '?')[0].toUpperCase() }}
+            </div>
           </template>
         </van-cell>
       </van-cell-group>
@@ -539,9 +539,8 @@ const showPhoneDialog = () => {
 };
 
 const showAvatarDialog = () => {
-  // 使用ref创建响应式变量
   const selectedFile = ref(null);
-  const previewUrl = ref(userInfo.value?.avatar ? `http://localhost:8001${userInfo.value.avatar}` : 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg');
+  const previewUrl = ref(userInfo.value?.avatar ? `http://localhost:8001${userInfo.value.avatar}` : '');
   
   showDialog({
     title: '修改头像',
@@ -628,7 +627,7 @@ const showAvatarDialog = () => {
 <style scoped>
 .profile-page {
   min-height: 100vh;
-  background-color: #f7f8fa;
+  background-color: var(--color-bg);
 }
 
 .profile-container {
@@ -642,27 +641,36 @@ const showAvatarDialog = () => {
   margin-top: 12px;
 }
 
+.avatar-group :deep(.van-cell),
+.info-group :deep(.van-cell),
+.security-group :deep(.van-cell) {
+  background: var(--color-card);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  box-shadow: 0 1px 2px var(--color-shadow);
+}
+
+.profile-avatar-letter {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  border: 2px solid var(--color-border);
+}
+
+.avatar-group :deep(.van-cell-group),
+.security-group :deep(.van-cell-group) {
+  border-radius: 8px;
+}
+
 .password-dialog .van-dialog__content {
   padding: 20px;
-}
-
-.password-form .form-item {
-  margin-bottom: 15px;
-  text-align: left;
-}
-
-.password-form .form-item span {
-  display: block;
-  margin-bottom: 5px;
-  text-align: left;
-}
-
-.password-form .password-input {
-  width: 100%;
-  border: 1px solid #dcdee0;
-  border-radius: 4px;
-  padding: 8px;
-  outline: none;
-  box-sizing: border-box;
 }
 </style>
