@@ -9,7 +9,11 @@
     <div class="knowledgebase-content">
       <div class="upload-area" @click="openFilePicker" @dragover.prevent @drop.prevent="handleDrop">
         <div class="upload-icon">
-          <van-icon name="upload" size="48" />
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
         </div>
         <p class="upload-text">{{ $t('knowledgebase.uploadText') }}</p>
         <p class="upload-hint">{{ $t('knowledgebase.uploadHint') }}</p>
@@ -702,8 +706,8 @@ onMounted(() => {
 <style scoped>
 .knowledgebase-container {
   min-height: 100vh;
-  background-color: var(--background-color);
-  color: var(--text-color);
+  background-color: var(--color-bg);
+  color: var(--color-text);
   padding-top: 46px;
   padding-bottom: 20px;
 }
@@ -713,32 +717,36 @@ onMounted(() => {
 }
 
 .upload-area {
-  border: 2px dashed #d9d9d9;
+  border: 2px dashed var(--color-border);
   border-radius: 12px;
-  padding: 40px 20px;
+  padding: 36px 20px;
   text-align: center;
   cursor: pointer;
   margin-bottom: 20px;
+  background: var(--color-surface);
+  transition: border-color 0.2s, background 0.2s;
 }
 
-.upload-area:hover {
-  border-color: #1989fa;
+.upload-area:active {
+  border-color: var(--color-primary);
+  background: rgba(212, 145, 74, 0.04);
 }
 
 .upload-icon {
-  color: #1989fa;
+  color: var(--color-text-lighter);
   margin-bottom: 12px;
 }
 
 .upload-text {
-  font-size: 16px;
-  font-weight: bold;
-  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 500;
+  margin: 0 0 6px;
+  color: var(--color-text);
 }
 
 .upload-hint {
   font-size: 12px;
-  color: #969799;
+  color: var(--color-text-lighter);
   margin: 0;
 }
 
@@ -751,10 +759,11 @@ onMounted(() => {
 }
 
 .section-title {
-  font-size: 14px;
-  font-weight: bold;
-  margin: 0;
-  color: #969799;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 10px;
+  color: var(--color-text-light);
+  font-family: var(--font-heading);
 }
 
 .list-header {
@@ -772,7 +781,7 @@ onMounted(() => {
 
 .document-count {
   font-size: 12px;
-  color: #969799;
+  color: var(--color-text-lighter);
 }
 
 .document-list {
@@ -781,7 +790,7 @@ onMounted(() => {
 
 .doc-meta {
   font-size: 12px;
-  color: #969799;
+  color: var(--color-text-lighter);
 }
 
 .delete-icon {
@@ -796,7 +805,7 @@ onMounted(() => {
 .empty-state {
   text-align: center;
   padding: 40px 20px;
-  color: #969799;
+  color: var(--color-text-lighter);
 }
 
 .empty-state p {
@@ -809,6 +818,10 @@ onMounted(() => {
 
 .progress-item {
   margin-bottom: 16px;
+  background: var(--color-card);
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px var(--color-shadow);
 }
 
 .progress-header {
@@ -820,32 +833,33 @@ onMounted(() => {
 
 .progress-filename {
   font-size: 14px;
+  color: var(--color-text);
 }
 
 .progress-status {
   font-size: 12px;
-  padding: 2px 8px;
+  padding: 2px 10px;
   border-radius: 10px;
 }
 
 .status-processing {
-  background-color: #fff7e6;
-  color: #faad14;
+  background-color: #FFF5E6;
+  color: #C28238;
 }
 
 .status-success {
-  background-color: #f6ffed;
-  color: #52c41a;
+  background-color: #F0F7ED;
+  color: #5A8F5E;
 }
 
 .status-failed {
-  background-color: #fff2f0;
-  color: #ff4d4f;
+  background-color: #FDF0EE;
+  color: #C2705A;
 }
 
 .progress-message {
   font-size: 12px;
-  color: #969799;
+  color: var(--color-text-lighter);
   margin: 8px 0 0;
 }
 
@@ -857,6 +871,7 @@ onMounted(() => {
 
 .upload-result p {
   margin: 8px 0 0;
+  color: var(--color-text-light);
 }
 
 .detail-header {
@@ -864,12 +879,13 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-divider);
 }
 
 .detail-header h4 {
   margin: 0;
   font-size: 16px;
+  font-family: var(--font-heading);
 }
 
 .header-actions {
@@ -886,21 +902,21 @@ onMounted(() => {
 
 .detail-meta {
   font-size: 12px;
-  color: #969799;
+  color: var(--color-text-lighter);
   margin-bottom: 16px;
 }
 
 .detail-preview {
   font-size: 14px;
   line-height: 1.6;
-  color: #666;
+  color: var(--color-text-light);
   white-space: pre-wrap;
 }
 
 .detail-content-full {
   font-size: 14px;
   line-height: 1.8;
-  color: #333;
+  color: var(--color-text);
   white-space: pre-wrap;
   word-wrap: break-word;
 }
@@ -918,19 +934,19 @@ onMounted(() => {
   align-items: center;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-divider);
 }
 
 .chunks-total {
   font-size: 12px;
-  color: #969799;
+  color: var(--color-text-lighter);
 }
 
 .chunk-item {
   display: flex;
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px dashed #eee;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed var(--color-border-light);
 }
 
 .chunk-item:last-child {
@@ -938,16 +954,17 @@ onMounted(() => {
 }
 
 .chunk-index {
-  min-width: 28px;
-  height: 28px;
-  background-color: #1989fa;
+  min-width: 26px;
+  height: 26px;
+  background-color: var(--color-primary);
   color: #fff;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
   margin-right: 12px;
+  flex-shrink: 0;
 }
 
 .chunk-body {
@@ -957,7 +974,7 @@ onMounted(() => {
 .detail-chunk {
   margin-bottom: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px dashed #eee;
+  border-bottom: 1px dashed var(--color-border-light);
 }
 
 .detail-chunk:last-child {
@@ -973,20 +990,20 @@ onMounted(() => {
 .detail-page-group + .detail-page-group {
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--color-divider);
 }
 
 .detail-page-label {
   font-size: 12px;
-  font-weight: bold;
-  color: #1989fa;
+  font-weight: 600;
+  color: var(--color-primary);
   margin-bottom: 8px;
 }
 
 .detail-text {
   font-size: 14px;
   line-height: 1.8;
-  color: #333;
+  color: var(--color-text);
   white-space: pre-wrap;
   word-wrap: break-word;
 }
@@ -998,8 +1015,9 @@ onMounted(() => {
 .detail-image-item {
   width: 100%;
   margin-bottom: 12px;
-  border-radius: 4px;
+  border-radius: 6px;
   overflow: hidden;
+  box-shadow: 0 1px 3px var(--color-shadow);
 }
 
 .chunk-images {
@@ -1009,14 +1027,14 @@ onMounted(() => {
 .chunk-image-item {
   width: 100%;
   margin-bottom: 8px;
-  border-radius: 4px;
+  border-radius: 6px;
   overflow: hidden;
 }
 
 .chunk-content {
   font-size: 13px;
   line-height: 1.6;
-  color: #666;
+  color: var(--color-text-light);
   white-space: pre-wrap;
   word-break: break-all;
 }

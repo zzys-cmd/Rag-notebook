@@ -32,7 +32,11 @@
         </van-cell>
         <van-cell class="contact-cell" title="作者QQ" value="1765413309">
           <template #icon>
-            <div class="contact-icon qq-icon">🐧</div>
+            <div class="contact-icon qq-icon">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+              </svg>
+            </div>
           </template>
         </van-cell>
       </van-cell-group>
@@ -69,8 +73,8 @@ const openLink = (url) => {
 <style scoped>
 .aboutus-container {
   min-height: 100vh;
-  background-color: var(--background-color);
-  color: var(--text-color);
+  background-color: var(--color-bg);
+  color: var(--color-text);
   padding-top: 46px;
   padding-bottom: 20px;
 }
@@ -81,14 +85,16 @@ const openLink = (url) => {
 
 .project-title {
   font-size: 18px;
-  font-weight: bold;
+  font-weight: 600;
+  font-family: var(--font-heading);
   margin: 0 0 12px;
   text-align: center;
+  color: var(--color-text);
 }
 
 .project-intro {
   font-size: 14px;
-  color: #666;
+  color: var(--color-text-light);
   line-height: 1.6;
   margin: 0 0 24px;
   text-align: center;
@@ -100,7 +106,7 @@ const openLink = (url) => {
 
 .link-text {
   font-size: 12px;
-  color: #1989fa;
+  color: var(--color-primary);
 }
 
 .contact-icon {
@@ -119,31 +125,33 @@ const openLink = (url) => {
 }
 
 .email-icon {
-  background-color: #07c160;
+  background-color: #7D9B7A;
   color: #fff;
 }
 
 .qq-icon {
-  background-color: #ffffff;
-  color: #fff;
+  background-color: #EBE0D0;
+  color: var(--color-text);
 }
 
 .contact-cell {
-  background-color: #f7f8fa;
+  background: var(--color-card);
   border-radius: 8px;
   margin-bottom: 8px;
+  box-shadow: 0 1px 2px var(--color-shadow);
 }
 
 .section-title {
   font-size: 14px;
-  font-weight: bold;
+  font-weight: 600;
+  font-family: var(--font-heading);
   margin: 0 0 12px;
-  color: #969799;
+  color: var(--color-text-lighter);
 }
 
 .tech-list {
   font-size: 14px;
-  color: var(--text-color);
+  color: var(--color-text);
   margin-bottom: 24px;
   padding: 0 4px;
 }

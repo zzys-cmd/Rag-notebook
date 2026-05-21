@@ -29,7 +29,11 @@
           :class="{ active: currentTheme === theme.id }"
           @click="changeTheme(theme.id)"
         >
-          <div class="theme-color" :style="{ backgroundColor: theme.primaryColor }"></div>
+          <div class="theme-preview" :style="{ backgroundColor: theme.bgColor || '#FAF7F2' }">
+            <div class="theme-preview-primary" :style="{ backgroundColor: theme.primaryColor }"></div>
+            <div class="theme-preview-text" :style="{ backgroundColor: '#3D3226' }"></div>
+            <div class="theme-preview-text2" :style="{ backgroundColor: '#8B7E6F' }"></div>
+          </div>
           <div class="theme-name">{{ theme.name }}</div>
         </div>
       </div>
@@ -118,8 +122,8 @@ const changeLanguage = () => {
 <style scoped>
 .settings-container {
   min-height: 100vh;
-  background-color: var(--background-color);
-  color: var(--text-color);
+  background-color: var(--color-bg);
+  color: var(--color-text);
   padding-top: 46px;
   padding-bottom: 20px;
 }
@@ -132,39 +136,78 @@ const changeLanguage = () => {
   text-align: center;
   padding: 16px;
   font-size: 16px;
-  font-weight: bold;
-  border-bottom: 1px solid #eee;
+  font-weight: 600;
+  font-family: var(--font-heading);
+  border-bottom: 1px solid var(--color-divider);
+  color: var(--color-text);
 }
 
 .theme-list {
   display: flex;
   flex-wrap: wrap;
-  padding: 16px;
+  padding: 20px 16px;
+  gap: 12px;
+  justify-content: center;
 }
 
 .theme-item {
-  width: 25%;
+  width: 40%;
+  max-width: 140px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 16px;
   cursor: pointer;
+  padding: 12px 8px;
+  border-radius: 10px;
+  transition: background 0.2s;
 }
 
-.theme-color {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+.theme-item:active {
+  background: var(--color-surface);
+}
+
+.theme-item.active {
+  background: var(--color-surface);
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.theme-preview {
+  width: 72px;
+  height: 48px;
+  border-radius: 8px;
   margin-bottom: 8px;
-  border: 2px solid transparent;
+  padding: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-content: flex-start;
+  overflow: hidden;
+  box-shadow: 0 1px 3px var(--color-shadow);
 }
 
-.theme-item.active .theme-color {
-  border-color: #1989fa;
+.theme-preview-primary {
+  width: 100%;
+  height: 6px;
+  border-radius: 2px;
+}
+
+.theme-preview-text {
+  width: 60%;
+  height: 4px;
+  border-radius: 2px;
+  opacity: 0.6;
+}
+
+.theme-preview-text2 {
+  width: 40%;
+  height: 4px;
+  border-radius: 2px;
+  opacity: 0.3;
 }
 
 .theme-name {
   font-size: 12px;
+  color: var(--color-text-light);
 }
 
 .popup-footer {
@@ -176,6 +219,7 @@ const changeLanguage = () => {
 }
 
 .language-active {
-  background-color: #f5f5f5;
+  background-color: var(--color-surface);
+  color: var(--color-text);
 }
 </style>
