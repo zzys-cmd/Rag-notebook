@@ -9,8 +9,29 @@
     
     <div class="chat-content">
       <div class="messages-container" ref="messagesContainer">
+        <!-- 欢迎状态（仅首次进入时显示） -->
+        <div v-if="showWelcome" class="welcome-card">
+          <div class="welcome-icon">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+              <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1.27A7.01 7.01 0 0 1 14 23h-4a7.01 7.01 0 0 1-6.73-5H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
+            </svg>
+          </div>
+          <h3 class="welcome-title">RAG 智能问答</h3>
+          <p class="welcome-desc">基于知识库文档的智能问答系统。上传你的文档，开始提问。</p>
+          <div class="welcome-questions">
+            <button
+              v-for="(q, i) in quickQuestions"
+              :key="i"
+              class="quick-question"
+              @click="sendQuickQuestion(q)"
+            >
+              {{ q }}
+            </button>
+          </div>
+        </div>
         <div 
           v-for="(message, index) in messages" 
+          v-show="!showWelcome || message.role === 'user' || index > 0"
           :key="index"
           :class="['message', message.role === 'user' ? 'user-message' : 'ai-message']"
         >
@@ -95,7 +116,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue';
+import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import TabBar from '../components/TabBar.vue';
 import { showToast } from 'vant';
@@ -103,7 +124,7 @@ import { marked } from 'marked';
 import { markedHighlight } from 'marked-highlight';
 import DOMPurify from 'dompurify';
 import hljs from 'highlight.js';
-import 'highlight.js/styles/monokai-sublime.css';
+import 'highlight.js/styles/github.css';
 import 'highlight.js/lib/common';
 import { apiConfig } from '../config/api';
 import { useUserStore } from '../store/user';
@@ -134,6 +155,24 @@ const route = useRoute();
 const userStore = useUserStore();
 const sessionStore = useSessionStore();
 
+// 欢迎状态：没有任何用户消息时显示
+const showWelcome = computed(() => {
+  return messages.value.length === 1 && messages.value[0].role === 'assistant';
+});
+
+// 快捷提问
+const quickQuestions = [
+  '给我讲个笑话',
+  '介绍一下 RAG 技术',
+  '你能帮我做什么？',
+  '如何开始使用？',
+];
+
+const sendQuickQuestion = (question) => {
+  userInput.value = question;
+  sendMessage();
+};
+
 // 配置marked使用marked-highlight插件
 marked.use(markedHighlight({
   langPrefix: 'hljs language-',
@@ -162,12 +201,12 @@ const formatMessage = (content) => {
   }
 };
 
-// 思考过程阶段配置
+// 思考过程阶段配置（温润色调）
 const stageConfig = {
-  retrieval:  { label: '检索',   color: '#1989fa' },
-  hyde:       { label: 'HyDE',   color: '#7232dd' },
-  reorder:    { label: '重排序', color: '#f07c1f' },
-  summarize:  { label: '总结',   color: '#07c160' }
+  retrieval:  { label: '检索',   color: '#B8926E' },
+  hyde:       { label: 'HyDE',   color: '#8B7E6F' },
+  reorder:    { label: '重排序', color: '#D4914A' },
+  summarize:  { label: '总结',   color: '#7D9B7A' }
 };
 
 const getStageLabel = (stage) => {
@@ -491,6 +530,7 @@ const loadSessionHistory = (session) => {
   padding-top: 46px;
   padding-bottom: 50px;
   box-sizing: border-box;
+  background-color: var(--color-bg);
 }
 
 .chat-content {
@@ -500,15 +540,77 @@ const loadSessionHistory = (session) => {
   overflow: hidden;
 }
 
+/* ==================== 欢迎卡片 ==================== */
+.welcome-card {
+  text-align: center;
+  padding: 40px 32px 24px;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.welcome-icon {
+  color: var(--color-primary);
+  margin-bottom: 12px;
+  opacity: 0.8;
+}
+
+.welcome-title {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  color: var(--color-text);
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+.welcome-desc {
+  font-size: 14px;
+  color: var(--color-text-light);
+  line-height: 1.6;
+  margin: 0 0 20px;
+}
+
+.welcome-questions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.quick-question {
+  all: unset;
+  display: inline-block;
+  font-size: 13px;
+  color: var(--color-text-light);
+  background: var(--color-card);
+  padding: 10px 18px;
+  border-radius: 24px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px var(--color-shadow);
+  border: 1px solid var(--color-border-light);
+  transition: all 0.15s ease;
+  line-height: 1.4;
+  font-family: var(--font-body);
+}
+
+.quick-question:active {
+  transform: scale(0.97);
+  background: var(--color-surface);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* ==================== 消息容器 ==================== */
 .messages-container {
   flex: 1;
   overflow-y: auto;
-  padding: 10px;
+  padding: 16px 12px;
 }
 
 .message {
-  margin-bottom: 10px;
+  margin-bottom: 14px;
   max-width: 80%;
+  animation: fadeIn 0.3s ease-out;
 }
 
 .user-message {
@@ -520,130 +622,66 @@ const loadSessionHistory = (session) => {
 }
 
 .message-content {
-  padding: 10px;
-  border-radius: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
   word-break: break-word;
+  line-height: 1.6;
 }
 
+/* 用户气泡 — 暖灰底 + 深棕文字 + 原角 */
 .user-message .message-content {
-  background-color: #007aff;
-  color: white;
+  background-color: #EDE4D8;
+  color: var(--color-text);
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 1px 2px var(--color-shadow);
 }
 
+/* AI 气泡 — 卡片底 + 暖棕文字 + 微阴影 */
 .ai-message .message-content {
-  background-color: #f2f2f2;
-  color: #333;
+  background-color: var(--color-card);
+  color: var(--color-text);
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 3px var(--color-shadow);
 }
 
+/* ==================== 输入区域 ==================== */
 .input-container {
   display: flex;
-  padding: 10px;
-  border-top: 1px solid #eee;
-  background-color: #fff;
+  padding: 8px 12px;
+  border-top: 1px solid var(--color-border-light);
+  background-color: var(--color-card);
+  align-items: flex-end;
 }
 
 .chat-input {
   flex: 1;
   margin-right: 10px;
+  --van-field-background: var(--color-surface);
+  --van-field-border-radius: 10px;
 }
 
 .send-button {
   align-self: flex-end;
 }
 
-/* Markdown 样式 */
-.message-content pre {
-  background-color: #f8f8f8;
-  padding: 10px;
-  border-radius: 5px;
-  overflow-x: auto;
-}
-
-.message-content code {
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 2px 4px;
-  border-radius: 3px;
-}
-
-.message-content img {
-  max-width: 100%;
-}
-
-/* 打字指示器 */
-.typing-indicator {
-  display: flex;
-  padding: 5px;
-}
-
-.typing-indicator span {
-  height: 8px;
-  width: 8px;
-  background-color: #999;
-  border-radius: 50%;
-  margin: 0 2px;
-  display: inline-block;
-  animation: bounce 1.5s infinite ease-in-out;
-}
-
-.typing-indicator span:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.typing-indicator span:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes bounce {
-  0%, 60%, 100% {
-    transform: translateY(0);
-  }
-  30% {
-    transform: translateY(-5px);
-  }
-}
-
-/* Markdown样式 */
-:deep(pre) {
-  background-color: #1e1e1e;
-  padding: 15px;
-  border-radius: 6px;
-  overflow-x: auto;
-  margin: 10px 0;
-  color: #d4d4d4;
-}
-
-:deep(pre code) {
-  background-color: transparent;
-  padding: 0;
-  border-radius: 0;
-  color: #d4d4d4;
-}
-
-:deep(code) {
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.9em;
-}
-
+/* ==================== Markdown 排版 ==================== */
 :deep(p) {
-  margin: 8px 0;
-  line-height: 1.5;
+  margin: 6px 0;
+  line-height: 1.7;
 }
 
 :deep(ul), :deep(ol) {
   padding-left: 20px;
-  margin: 8px 0;
+  margin: 6px 0;
 }
 
 :deep(li) {
-  margin: 4px 0;
-  line-height: 1.5;
+  margin: 3px 0;
+  line-height: 1.6;
 }
 
 :deep(a) {
-  color: #1989fa;
+  color: var(--color-primary);
   text-decoration: none;
 }
 
@@ -652,69 +690,121 @@ const loadSessionHistory = (session) => {
 }
 
 :deep(h1), :deep(h2), :deep(h3), :deep(h4), :deep(h5), :deep(h6) {
-  margin: 12px 0 8px 0;
-  font-weight: bold;
+  margin: 10px 0 6px;
+  font-weight: 600;
+  color: var(--color-text);
 }
 
-:deep(h1) {
-  font-size: 1.5em;
-}
-
-:deep(h2) {
-  font-size: 1.3em;
-}
-
-:deep(h3) {
-  font-size: 1.1em;
-}
+:deep(h1) { font-size: 1.4em; }
+:deep(h2) { font-size: 1.25em; }
+:deep(h3) { font-size: 1.1em; }
 
 :deep(blockquote) {
-  border-left: 4px solid #1989fa;
-  padding-left: 10px;
-  margin: 10px 0;
-  color: #666;
-  background-color: #f9f9f9;
-  padding: 8px 12px;
-  border-radius: 0 4px 4px 0;
+  border-left: 3px solid var(--color-primary);
+  padding: 6px 12px;
+  margin: 8px 0;
+  color: var(--color-text-light);
+  background-color: var(--color-surface);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.95em;
 }
 
 :deep(hr) {
   border: 0;
-  border-top: 1px solid #eee;
-  margin: 16px 0;
+  border-top: 1px solid var(--color-divider);
+  margin: 14px 0;
 }
 
 :deep(img) {
   max-width: 100%;
-  border-radius: 4px;
-  margin: 8px 0;
+  border-radius: 6px;
+  margin: 6px 0;
 }
 
 :deep(table) {
   width: 100%;
   border-collapse: collapse;
-  margin: 10px 0;
+  margin: 8px 0;
+  font-size: 0.95em;
 }
 
 :deep(th), :deep(td) {
-  border: 1px solid #ddd;
-  padding: 8px;
+  border: 1px solid var(--color-border);
+  padding: 6px 10px;
   text-align: left;
 }
 
 :deep(th) {
-  background-color: #f2f2f2;
-  font-weight: bold;
+  background-color: var(--color-surface);
+  font-weight: 600;
 }
 
-/* 思考过程样式 */
+/* 代码块 — 暖调浅底 */
+:deep(pre) {
+  background-color: var(--color-surface);
+  padding: 14px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 10px 0;
+  border: 1px solid var(--color-border-light);
+  font-size: 0.9em;
+  line-height: 1.5;
+}
+
+:deep(pre code) {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-family: 'Consolas', 'Monaco', 'Courier New', 'Source Code Pro', monospace;
+  font-size: inherit;
+  color: inherit;
+}
+
+:deep(code) {
+  font-family: 'Consolas', 'Monaco', 'Courier New', 'Source Code Pro', monospace;
+  background-color: var(--color-surface);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  color: var(--color-text-light);
+}
+
+/* ==================== 打字指示器 ==================== */
+.typing-indicator {
+  display: flex;
+  padding: 4px 0;
+  gap: 4px;
+}
+
+.typing-indicator span {
+  height: 7px;
+  width: 7px;
+  background-color: var(--color-text-lighter);
+  border-radius: 50%;
+  display: inline-block;
+  animation: bounce 1.4s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30%           { transform: translateY(-6px); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ==================== 思考过程 ==================== */
 .thinking-section {
   margin-bottom: 8px;
-  border-left: 3px solid #ddd;
-  padding-left: 8px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-  padding: 6px 8px;
+  border-left: 3px solid rgba(212, 145, 74, 0.25);
+  background-color: var(--color-surface);
+  border-radius: 6px;
+  padding: 8px 10px;
   font-size: 12px;
 }
 
@@ -728,23 +818,23 @@ const loadSessionHistory = (session) => {
 }
 
 .thinking-label {
-  color: #999;
+  color: var(--color-text-lighter);
   font-weight: 500;
   font-size: 12px;
 }
 
 .thinking-toggle {
-  color: #bbb;
+  color: var(--color-text-lightest);
   font-size: 11px;
 }
 
 .thinking-body {
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .thinking-step {
   padding: 4px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--color-border-light);
   line-height: 1.4;
 }
 
@@ -756,30 +846,31 @@ const loadSessionHistory = (session) => {
   display: inline-block;
   font-size: 10px;
   color: #fff;
-  padding: 1px 5px;
+  padding: 2px 7px;
   border-radius: 3px;
-  margin-right: 4px;
+  margin-right: 5px;
   vertical-align: middle;
   line-height: 1.5;
+  letter-spacing: 0.3px;
 }
 
 .thinking-step-content {
-  color: #888;
+  color: var(--color-text-light);
   font-size: 12px;
   vertical-align: middle;
 }
 
 .thinking-details {
-  margin-top: 3px;
-  padding: 4px 6px;
-  background-color: #f0f0f0;
-  border-radius: 3px;
+  margin-top: 4px;
+  padding: 6px 8px;
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
   font-size: 11px;
-  color: #999;
+  color: var(--color-text-lighter);
 }
 
 .thinking-detail-text {
-  color: #999;
+  color: var(--color-text-lighter);
   font-size: 11px;
   line-height: 1.4;
 }
@@ -791,12 +882,12 @@ const loadSessionHistory = (session) => {
 }
 
 .thinking-detail-key {
-  color: #aaa;
+  color: var(--color-text-lightest);
   white-space: nowrap;
 }
 
 .thinking-detail-val {
-  color: #999;
+  color: var(--color-text-lighter);
   word-break: break-all;
 }
 
@@ -804,12 +895,12 @@ const loadSessionHistory = (session) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1px 0;
+  padding: 2px 0;
   line-height: 1.5;
 }
 
 .thinking-doc-source {
-  color: #999;
+  color: var(--color-text-lighter);
   font-size: 11px;
   flex: 1;
   overflow: hidden;
@@ -818,14 +909,14 @@ const loadSessionHistory = (session) => {
 }
 
 .thinking-doc-score {
-  color: #888;
+  color: var(--color-text-light);
   font-size: 11px;
   margin-left: 8px;
   white-space: nowrap;
 }
 
 .thinking-doc-more {
-  color: #bbb;
+  color: var(--color-text-lightest);
   font-size: 11px;
   margin-top: 2px;
 }
@@ -834,10 +925,10 @@ const loadSessionHistory = (session) => {
   display: flex;
   gap: 6px;
   align-items: center;
-  padding: 1px 0;
+  padding: 2px 0;
   line-height: 1.5;
   font-size: 11px;
-  color: #999;
+  color: var(--color-text-lighter);
 }
 
 .thinking-score-preview {
@@ -845,6 +936,6 @@ const loadSessionHistory = (session) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #aaa;
+  color: var(--color-text-lightest);
 }
 </style>
