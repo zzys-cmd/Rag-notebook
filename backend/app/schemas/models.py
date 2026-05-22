@@ -126,3 +126,60 @@ class MD5ListResponse(BaseModel):
     """MD5记录列表响应模型"""
     records: List[MD5Record]
     total_count: int
+
+
+class NoteCreate(BaseModel):
+    """创建笔记请求模型"""
+    title: str
+    content: str
+
+
+class NoteUpdate(BaseModel):
+    """更新笔记请求模型（所有字段可选）"""
+    title: Optional[str] = None
+    content: Optional[str] = None
+
+
+class NoteResponse(BaseModel):
+    """笔记响应模型"""
+    id: str
+    user_id: str
+    title: str
+    content: str
+    tags: Optional[List[str]] = None
+    category: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class NoteListResponse(BaseModel):
+    """笔记列表响应模型"""
+    notes: List[NoteResponse]
+    total_count: int
+
+
+class NoteSearchRequest(BaseModel):
+    """笔记搜索请求模型"""
+    query: str
+
+
+class RelatedNoteItem(BaseModel):
+    """关联笔记项模型"""
+    id: str
+    title: str
+    content_preview: str
+    similarity: float
+    source: str  # 来源：knowledge_base 或 note
+
+
+class RelatedNotesResponse(BaseModel):
+    """关联笔记列表响应模型"""
+    notes: List[RelatedNoteItem]
+
+
+class PageRequest(BaseModel):
+    """分页请求模型"""
+    page: int = 1
+    page_size: int = 20
+    category: Optional[str] = None
+    tag: Optional[str] = None
