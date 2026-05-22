@@ -8,11 +8,13 @@ from app.rag.reorder_service import reorder_service
 from app.utils.factory import chat_model
 from app.utils.prompt_loader import load_prompt
 from app.core.logger_handler import logger
+from app.services.note_service import note_service
 
 
 class RagService:
     def __init__(self, user_id: str = None, thinking_callback=None):
         self.vector_store = VectorStoreService()
+        self.note_service = note_service
         self.retriever = None
         self.user_id = user_id
         self.prompt_text = load_prompt(prompt_type="rag_summary_prompt")
@@ -119,27 +121,50 @@ class RagService:
                 })
             
             documents = await self.retriever.ainvoke(hypothetical_doc)
-            logger.info(f"【HyDE】检索到 {len(documents)} 个相关文档")
-            
+
+            # 同时检索笔记库
+            note_docs = []
+            try:
+                note_docs = await asyncio.to_thread(
+                    self.note_service.notes_store.similarity_search,
+                    hypothetical_doc, k=3,
+                    filter={"user_id": self.user_id}
+                )
+            except Exception as e:
+                logger.error(f"【RAG】检索笔记失败: {e}")
+
+            # 标记来源并合并（笔记在前，知识库在后）
+            for doc in documents:
+                doc.metadata["source_type"] = "knowledge_base"
+            for doc in note_docs:
+                doc.metadata["source_type"] = "note"
+            all_documents = note_docs + documents
+
+            logger.info(f"【HyDE】检索到 {len(documents)} 个知识库文档, {len(note_docs)} 个笔记文档")
+
             if self.thinking_callback:
                 doc_previews = []
-                for i, doc in enumerate(documents, 1):
+                for i, doc in enumerate(all_documents, 1):
                     preview = doc.page_content[:150] + "..." if len(doc.page_content) > 150 else doc.page_content
+                    if doc.metadata.get("source_type") == "note":
+                        source = f"笔记《{doc.metadata.get('title', '无标题')}》"
+                    else:
+                        source = doc.metadata.get("original_filename", doc.metadata.get("source", "unknown"))
                     doc_previews.append({
                         "index": i,
                         "preview": preview,
-                        "source": doc.metadata.get("original_filename", doc.metadata.get("source", "unknown"))
+                        "source": source,
                     })
                 await self.thinking_callback({
                     "type": "thinking",
                     "stage": "retrieval",
-                    "content": f"检索到 {len(documents)} 个相关文档",
+                    "content": f"检索到 {len(note_docs)} 篇相关笔记, {len(documents)} 篇知识库文档",
                     "details": {
                         "documents": doc_previews
                     }
                 })
-            
-            return documents
+
+            return all_documents
         except Exception as e:
             logger.error(f"【HyDE】检索文档失败: {e}")
             return []
@@ -204,8 +229,16 @@ class RagService:
         try:
             documents = await self.retrieve_document(query)
 
-            # 提取文档内容列表
-            document_contents = [doc.page_content for doc in documents]
+            # 提取文档内容列表，附上来源标记供 LLM 引用
+            def _format_doc(doc):
+                if doc.metadata.get("source_type") == "note":
+                    title = doc.metadata.get("title", "无标题")
+                    return f"[来源：笔记《{title}》]\n{doc.page_content}"
+                else:
+                    filename = doc.metadata.get("original_filename", "知识库文档")
+                    return f"[来源：知识库《{filename}》]\n{doc.page_content}"
+
+            document_contents = [_format_doc(doc) for doc in documents]
 
             # 对文档进行重排序
             reordered_documents = await self.reorder_documents(query, document_contents)
