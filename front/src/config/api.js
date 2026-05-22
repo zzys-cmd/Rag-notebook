@@ -40,6 +40,22 @@ export const apiConfig = {
     cleanVectors: '/knowledge/clean',
 
     // 文档重排序
-    reorderDocuments: '/chat/reorder'
+    reorderDocuments: '/chat/reorder',
+    
+    // 笔记管理
+    noteCreate: '/note/create',
+    noteUpdate: (noteId) => `/note/${noteId}`,
+    noteDelete: (noteId) => `/note/${noteId}`,
+    noteDetail: (noteId) => `/note/${noteId}`,
+    noteList: '/note/list',
+    noteSearch: '/note/search',
+    noteAutoTag: (noteId) => `/note/${noteId}/auto-tag`,
+    noteRelated: (noteId) => `/note/${noteId}/related`,
+    noteAutocomplete: '/note/autocomplete',
+    noteAssistStream: '/note/assist/stream',
+    
+    // 回顾提醒
+    reviewToday: '/review/today',
+    reviewDone: (noteId) => `/review/done/${noteId}`,
   }
 }

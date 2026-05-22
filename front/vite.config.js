@@ -26,7 +26,25 @@ export default defineConfig({
         target: 'http://127.0.0.1:8000',
         changeOrigin: true
       },
-      '/chat': {
+      // chat API 子路径代理（避免匹配前端的 /chat 页面路由）
+      '/chat/agent/': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        ws: true
+      },
+      '/chat/rag/': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true
+      },
+      '/chat/session/': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true
+      },
+      '/chat/sessions': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true
+      },
+      '/chat/reorder': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true
       },
@@ -41,6 +59,16 @@ export default defineConfig({
       },
       '/file': {
         target: 'http://127.0.0.1:8001',
+        changeOrigin: true
+      },
+      // 笔记相关接口代理（加尾部斜杠避免匹配 /notes 页面路由）
+      '/note/': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true
+      },
+      // 回顾相关接口代理
+      '/review/': {
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true
       }
     }
