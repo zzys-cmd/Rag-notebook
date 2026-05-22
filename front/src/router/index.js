@@ -3,7 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 const routes = [
   {
     path: '/',
-    redirect: '/aichat'
+    redirect: '/notes'
   },
   {
     path: '/login',
@@ -24,22 +24,31 @@ const routes = [
     }
   },
   {
-    path: '/aichat',
+    path: '/chat',
     name: 'AIChat',
     component: () => import('../views/AIChat.vue'),
     meta: {
-      title: 'AI问答',
+      title: 'AI助手',
       keepAlive: true
     }
   },
   {
-    path: '/aichat/:sessionId',
+    path: '/chat/:sessionId',
     name: 'AIChatWithSession',
     component: () => import('../views/AIChat.vue'),
     meta: {
-      title: 'AI问答',
+      title: 'AI助手',
       keepAlive: true
     }
+  },
+  // 兼容旧路由
+  {
+    path: '/aichat',
+    redirect: '/chat'
+  },
+  {
+    path: '/aichat/:sessionId',
+    redirect: (to) => `/chat/${to.params.sessionId}`
   },
   {
     path: '/my',
@@ -78,13 +87,18 @@ const routes = [
     }
   },
   {
-    path: '/knowledgebase',
+    path: '/knowledge',
     name: 'KnowledgeBase',
     component: () => import('../views/KnowledgeBase.vue'),
     meta: {
       title: '知识库管理',
       keepAlive: false
     }
+  },
+  // 兼容旧路由
+  {
+    path: '/knowledgebase',
+    redirect: '/knowledge'
   },
   {
     path: '/sessions',
@@ -93,6 +107,33 @@ const routes = [
     meta: {
       title: '会话管理',
       keepAlive: true
+    }
+  },
+  {
+    path: '/notes',
+    name: 'NoteList',
+    component: () => import('../views/NoteList.vue'),
+    meta: {
+      title: '笔记',
+      keepAlive: true
+    }
+  },
+  {
+    path: '/notes/:id',
+    name: 'NoteEditor',
+    component: () => import('../views/NoteEditor.vue'),
+    meta: {
+      title: '编辑笔记',
+      keepAlive: false
+    }
+  },
+  {
+    path: '/review',
+    name: 'DailyReview',
+    component: () => import('../views/DailyReview.vue'),
+    meta: {
+      title: '每日回顾',
+      keepAlive: false
     }
   },
 ]
@@ -105,8 +146,8 @@ const router = createRouter({
 // 全局前置守卫
 router.beforeEach((to, from, next) => {
   // 设置页面标题
-  document.title = to.meta.title || '新闻资讯'
-  
+  document.title = to.meta.title || 'AI Second Brain'
+
   // 直接允许访问所有页面
   next()
 })
