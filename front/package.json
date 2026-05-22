@@ -9,7 +9,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@bytemd/plugin-frontmatter": "^1.22.0",
+    "@bytemd/plugin-gfm": "^1.22.0",
+    "@bytemd/plugin-highlight": "^1.22.0",
+    "@bytemd/plugin-math": "^1.22.0",
+    "@bytemd/plugin-medium-zoom": "^1.22.0",
+    "@bytemd/plugin-mermaid": "^1.22.0",
+    "@bytemd/vue-next": "^1.22.0",
     "axios": "^1.12.2",
+    "bytemd": "^1.22.0",
     "dompurify": "^3.2.7",
     "highlight.js": "^11.11.1",
     "marked": "^16.3.0",
