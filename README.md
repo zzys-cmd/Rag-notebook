@@ -11,7 +11,7 @@
 </div>
 
 
-AI 驱动的个人知识管理工具，融合 **笔记管理 + RAG 知识库 + 间隔重复回顾 + AI 写作辅助**，解决"笔记写了从不回看、知识散落成孤岛"的问题。
+AI 驱动的个人知识管理工具，融合 **笔记管理 + RAG 知识库 + AI 写作辅助**，解决"笔记写了从不回看、知识散落成孤岛"的问题。
 
 ---
 
@@ -48,15 +48,14 @@ AI 驱动的个人知识管理工具，融合 **笔记管理 + RAG 知识库 + �
 - **🏷️ 智能标签**：保存笔记后 LLM 异步生成标签和分类（工作/学习/生活/项目），无需手动归类
 - **🔍 语义搜索**：基于向量嵌入的笔记全文搜索，告别关键词匹配
 - **🔄 间隔重复回顾**：艾宾浩斯遗忘曲线（1/2/4/7/15/30 天）
-- **✍️ AI 联机补全**：打字停顿后 Ollama 小模型实时补全，Tab 键快速采纳
+- **✍️ AI 联机补全**：打字停顿后模型实时补全，Tab 键快速采纳
 - **🤖 AI 写作助手**：续写、扩写、摘要生成，SSE 流式输出
-- **🔗 跨源关联推荐**：编辑笔记时，从笔记库和知识库双向检索 Top 3 相关文档
+- **🔗 跨源关联推荐**：编辑笔记时，从笔记库和知识库双向检索 Top k 相关文档
 - **💬 智能问答**：基于 RAG 技术的 Agent 对话，支持文档引用来源展示
 - **💾 会话持久化**：MySQL 存储对话历史，随时回溯
 - **📄 文档管理**：支持 TXT / PDF / MD / PPTX / DOCX 上传，可视化切片详情
 - **🌐 多语言支持**：前端 i18n，中英文界面切换
 - **⛑️ 安全隔离**：用户级知识库隔离，RAG 检索只能访问本人数据
-- **🏗️ 微服务架构**：分离的用户服务（Django）和对话服务（FastAPI）
 
 ## 项目演示
 
@@ -344,42 +343,11 @@ separators: ["\n\n", "\n", "。", "！", "？", "!", "?", " ", ""]
 系统支持 **阿里云百炼（DashScope）** 和 **Ollama（本地部署）**两种模式：
 
 - **LLM_TYPE=ALIYUN**：使用 Qwen3-Max 大模型 + text-embedding-v4 嵌入
-- **LLM_TYPE=OLLAMA**：使用本地 Ollama 模型（推荐 qwen3.5:0.8b）
+- **LLM_TYPE=OLLAMA**：使用本地 Ollama 模型
 
 ### 重排序模型
 
 下载 Qwen3-Reranker-0.6B 模型并配置 `RERANKER_MODEL_PATH` 路径，参考 [模型配置指南](./docs/modelscope_model.md)。
-
-## 开发指南
-
-### 核心模块说明
-
-- `backend/app/services/note_service.py`：笔记 CRUD + 向量化 + AI 写作 + 语义搜索
-- `backend/app/services/review_service.py`：艾宾浩斯间隔重复算法
-- `backend/app/agent/`：AgentExecutor + 自定义工具
-- `backend/app/rag/`：HyDE 检索增强、ChromaDB 向量存储、文档解析
-- `backend/app/prompt/`：8 个提示词模板（主对话、RAG 摘要、自动标签、联机补全等）
-
-### 数据库表
-
-| 表名 | 说明 | 核心字段 |
-|------|------|---------|
-| `notes` | 笔记 | user_id, title, content, tags(JSON), category |
-| `review_records` | 回顾记录 | note_id(FK), last_reviewed_at, next_review_at, interval_days, review_count |
-| `chat_history` | 聊天历史 | session_id, user_id, role, content, timestamp |
-| `md5_records` | 文档去重 | md5_value, user_id, filename |
-
-### 前端路由
-
-| 路径 | 页面 | 说明 |
-|------|------|------|
-| `/` | 重定向到 `/notes` | 默认首页为笔记列表 |
-| `/notes` | 笔记列表 | 分页展示 + 分类筛选 |
-| `/notes/:id` | 笔记编辑器 | Markdown 编辑 + 关联推荐 |
-| `/review` | 每日回顾 | 艾宾浩斯回顾卡片 |
-| `/chat` | AI 聊天 | RAG 智能问答 |
-| `/knowledge` | 知识库管理 | 文档上传/查看 |
-| `/sessions` | 会话管理 | 聊天历史列表 |
 
 ## 故障排除
 
