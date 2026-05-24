@@ -32,6 +32,11 @@
       <!-- Markdown 编辑器 -->
       <div class="editor-body">
         <MarkdownEditor ref="markdownEditorRef" v-model="content" />
+        <InlineCompletion
+          :context="completionContext"
+          :position="cursorPosition"
+          @accept="handleAccept"
+        />
       </div>
     </div>
 
@@ -128,6 +133,7 @@ import { useUserStore } from '../store/user'
 import MarkdownEditor from '../components/MarkdownEditor.vue'
 import QuickToolbar from '../components/QuickToolbar.vue'
 import TagBadge from '../components/TagBadge.vue'
+import InlineCompletion from '../components/InlineCompletion.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -135,6 +141,11 @@ const userStore = useUserStore()
 
 /** ---- 编辑器引用 ---- */
 const markdownEditorRef = ref(null)
+
+/** ---- 内联补全（行内自动补全） ---- */
+const completionContext = ref('')
+const cursorPosition = ref({ top: 0, left: 0 })
+let cmCleanup = null
 
 /** ---- 编辑器状态 ---- */
 const title = ref('')
@@ -348,6 +359,15 @@ async function handleDelete() {
   }
 }
 
+/** 接受行内补全：将补全文本插入光标位置 */
+function handleAccept(completion) {
+  const cm = markdownEditorRef.value?.getEditorCm()
+  if (!cm) return
+  const cursor = cm.getCursor()
+  cm.getDoc().replaceRange(completion, cursor)
+  completionContext.value = ''
+}
+
 function goBack() {
   if (title.value || content.value) {
     autoSaveDraft()
@@ -369,11 +389,47 @@ onMounted(() => {
   } else {
     loadNote()
   }
+  setupCursorTracking()
 })
+
+/** 设置光标跟踪：监听光标位置变化，更新上下文和 ghost text 位置 */
+function setupCursorTracking() {
+  const cm = markdownEditorRef.value?.getEditorCm()
+  if (!cm) {
+    setTimeout(setupCursorTracking, 100)
+    return
+  }
+
+  const editorBody = document.querySelector('.editor-body')
+
+  function updateCursor() {
+    if (!editorBody) return
+    const ctx = markdownEditorRef.value?.getCursorContext()
+    if (!ctx) return
+    completionContext.value = ctx.textBeforeCursor
+    const rect = editorBody.getBoundingClientRect()
+    cursorPosition.value = {
+      top: ctx.cursorCoords.top - rect.top,
+      left: ctx.cursorCoords.left - rect.left,
+    }
+  }
+
+  cm.on('cursorActivity', updateCursor)
+  const scrollEl = cm.getScrollerElement()
+  if (scrollEl) scrollEl.addEventListener('scroll', updateCursor)
+
+  updateCursor()
+
+  cmCleanup = () => {
+    cm.off('cursorActivity', updateCursor)
+    if (scrollEl) scrollEl.removeEventListener('scroll', updateCursor)
+  }
+}
 
 onUnmounted(() => {
   if (autoSaveTimer) clearTimeout(autoSaveTimer)
   if (relatedRefreshTimer) clearTimeout(relatedRefreshTimer)
+  if (cmCleanup) cmCleanup()
 })
 </script>
 
