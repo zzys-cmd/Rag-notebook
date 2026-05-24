@@ -83,7 +83,28 @@ function getEditorCm() {
   return el?.CodeMirror || null
 }
 
-defineExpose({ getEditorCm })
+/**
+ * 获取光标上下文：光标前文本 + 光标在页面中的坐标
+ */
+function getCursorContext() {
+  const cm = getEditorCm()
+  if (!cm) return null
+  try {
+    const cursor = cm.getCursor()
+    const textBeforeCursor = cm.getRange({ line: 0, ch: 0 }, cursor)
+    const coords = cm.cursorCoords(true, 'window')
+    return {
+      textBeforeCursor,
+      cursorCoords: coords,
+      line: cursor.line,
+      ch: cursor.ch
+    }
+  } catch (e) {
+    return null
+  }
+}
+
+defineExpose({ getEditorCm, getCursorContext })
 </script>
 
 <style>
