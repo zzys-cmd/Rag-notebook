@@ -1,35 +1,39 @@
 <template>
-  <span v-if="visible" class="ghost-text" ref="ghostEl">
-    {{ completion }}
-  </span>
+  <div v-if="visible" class="ghost-wrapper" :style="wrapperStyle">
+    <span class="ghost-text">{{ completion }}</span>
+    <span class="ghost-meta">
+      <span class="ghost-hint">&#8627; Tab</span>
+      <span v-if="isTouchDevice" class="ghost-sep">&#183;</span>
+      <span v-if="isTouchDevice" class="ghost-accept-btn" @click.stop="acceptCompletion">接受</span>
+    </span>
+  </div>
 </template>
 
 <script setup>
-/**
- * InlineCompletion 内联补全组件 —— 幽灵文本（ghost text），对标 GitHub Copilot。
- * 通过 absolute 定位在光标位置，opacity: 0.4 渲染补全建议。
- * Tab 键接受补全，Esc / 继续输入则消失。
- */
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { apiConfig } from '../config/api'
 import { useUserStore } from '../store/user'
 
 const props = defineProps({
-  context: { type: String, default: '' },   /** 光标前上下文文本 */
-  editorEl: { type: Object, default: null }, /** 编辑器 DOM 元素引用 */
+  context: { type: String, default: '' },
+  position: { type: Object, default: () => ({ top: 0, left: 0 }) },
 })
 
-const emit = defineEmits(['accept'])         /** Tab 键触发，返回补全文本 */
+const emit = defineEmits(['accept'])
 
 const userStore = useUserStore()
 const visible = ref(false)
 const completion = ref('')
-const ghostEl = ref(null)
+const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
 
 let debounceTimer = null
-let controller = null  /** AbortController 用于取消重复请求 */
+let controller = null
 
-/** 请求头 */
+const wrapperStyle = computed(() => ({
+  top: `${props.position.top}px`,
+  left: `${props.position.left}px`,
+}))
+
 function getHeaders() {
   return {
     'Content-Type': 'application/json',
@@ -37,16 +41,16 @@ function getHeaders() {
   }
 }
 
-/** 请求补全 */
+function acceptCompletion() {
+  if (!completion.value) return
+  emit('accept', completion.value)
+  visible.value = false
+}
+
 async function fetchCompletion(context) {
   if (!context || context.length < 5) return
-
-  // 取消上一次未完成的请求
-  if (controller) {
-    controller.abort()
-  }
+  if (controller) controller.abort()
   controller = new AbortController()
-
   try {
     const res = await fetch(apiConfig.endpoints.noteAutocomplete, {
       method: 'POST',
@@ -61,12 +65,11 @@ async function fetchCompletion(context) {
     }
   } catch (e) {
     if (e.name !== 'AbortError') {
-      // ignore other errors
+      console.error('Autocomplete error:', e)
     }
   }
 }
 
-/** 上下文变化时，500ms 防抖后请求补全 */
 watch(() => props.context, (newVal) => {
   visible.value = false
   if (debounceTimer) clearTimeout(debounceTimer)
@@ -75,40 +78,74 @@ watch(() => props.context, (newVal) => {
   }, 500)
 })
 
-/** 监听键盘事件：Tab 接受，Esc / 任意输入取消 */
 function handleKeydown(e) {
   if (!visible.value) return
-
   if (e.key === 'Tab') {
     e.preventDefault()
-    emit('accept', completion.value)
-    visible.value = false
+    e.stopPropagation()
+    acceptCompletion()
   } else if (e.key === 'Escape') {
+    visible.value = false
+  } else if (e.key.length === 1) {
     visible.value = false
   }
 }
 
 onMounted(() => {
-  document.addEventListener('keydown', handleKeydown)
+  document.addEventListener('keydown', handleKeydown, { capture: true })
 })
 
 onUnmounted(() => {
-  document.removeEventListener('keydown', handleKeydown)
+  document.removeEventListener('keydown', handleKeydown, { capture: true })
   if (debounceTimer) clearTimeout(debounceTimer)
   if (controller) controller.abort()
 })
 </script>
 
 <style scoped>
-.ghost-text {
+.ghost-wrapper {
   position: absolute;
-  pointer-events: none;           /** 不拦截点击事件 */
-  opacity: 0.4;
+  pointer-events: none;
+  display: inline;
+  white-space: pre-wrap;
+  max-width: 60vw;
+  z-index: 10;
+  line-height: 1.7;
+}
+
+.ghost-text {
+  opacity: 0.3;
   color: #999;
   font-family: 'Noto Sans SC', monospace;
   font-size: 15px;
-  line-height: 1.7;
   white-space: pre-wrap;
-  z-index: 1;
+}
+
+/* ---- 补全操作元信息（Tab 提示 + 接受按钮） ---- */
+.ghost-meta {
+  display: inline;
+  white-space: nowrap;
+  font-size: 11px;
+  color: #d0d0d0;
+  user-select: none;
+}
+
+.ghost-hint {
+  margin-left: 4px;
+}
+
+.ghost-sep {
+  margin: 0 3px;
+  color: #e0e0e0;
+}
+
+.ghost-accept-btn {
+  pointer-events: auto;
+  cursor: pointer;
+  color: #D4914A;
+  -webkit-tap-highlight-color: transparent;
+}
+.ghost-accept-btn:active {
+  color: #b87a3a;
 }
 </style>
