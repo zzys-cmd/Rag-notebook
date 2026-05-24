@@ -16,8 +16,8 @@
               <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1.27A7.01 7.01 0 0 1 14 23h-4a7.01 7.01 0 0 1-6.73-5H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
             </svg>
           </div>
-          <h3 class="welcome-title">RAG 智能问答</h3>
-          <p class="welcome-desc">基于知识库文档的智能问答系统。上传你的文档，开始提问。</p>
+          <h3 class="welcome-title">智能笔记助手</h3>
+          <p class="welcome-desc">基于你的笔记和知识库的智能助手。帮你整理思路、优化内容、随时问答。</p>
           <div class="welcome-questions">
             <button
               v-for="(q, i) in quickQuestions"
@@ -141,7 +141,7 @@ const getCsrfToken = () => {
 
 // 聊天消息
 const messages = ref([
-  { role: 'assistant', content: '你好！我是AI助手，有什么可以帮助你的吗？' }
+  { role: 'assistant', content: '你好！我是智能笔记助手，帮你整理笔记、优化内容、回答关于笔记的问题。' }
 ]);
 const userInput = ref('');
 const messagesContainer = ref(null);
@@ -162,10 +162,10 @@ const showWelcome = computed(() => {
 
 // 快捷提问
 const quickQuestions = [
-  '给我讲个笑话',
-  '介绍一下 RAG 技术',
-  '你能帮我做什么？',
-  '如何开始使用？',
+  '帮我整理笔记要点',
+  '如何写出更好的笔记？',
+  '总结这篇笔记的核心内容',
+  '为我的笔记添加标签建议',
 ];
 
 const sendQuickQuestion = (question) => {
