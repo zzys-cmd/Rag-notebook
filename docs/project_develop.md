@@ -18,5 +18,5 @@
 
 ### 结语
 
-RAG NoteBook 的目标是成为**真正能用的个人知识管理工具**，而不仅仅是又一个 AI demo。后续方向：
+RAG NoteBook 的目标是成为**真正能用的个人知识管理工具**，而不仅仅是又一个 AI demo。项目按 `main` 分支持续维护，如有问题或建议，欢迎在 [Issues](https://github.com/zzys-cmd/Rag-notebook/issues) 里提出。
 
