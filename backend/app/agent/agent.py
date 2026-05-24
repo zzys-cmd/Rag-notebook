@@ -12,8 +12,9 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import BaseTool
 
 from app.agent.agent_middleware import get_middleware
-from app.agent.agent_tools import rag_summary_tools, get_weather_tools, what_time_is_now, get_user_info_tools, \
-    reorder_documents_tools, set_current_user_id, set_thinking_callback
+from app.agent.agent_tools import rag_summary_tools, what_time_is_now, get_user_info_tools, \
+    search_notes_tool, get_note_stats_tool, get_today_reviews_tool, mark_reviewed_tool, \
+    create_note_tool, get_related_notes_tool, set_current_user_id, set_thinking_callback
 from app.core.logger_handler import logger
 from app.services import session_manager as sm
 from app.utils.prompt_loader import load_prompt
@@ -54,10 +55,14 @@ class AgentFactory:
         """获取默认工具列表"""
         return [
             rag_summary_tools,
-            get_weather_tools,
             what_time_is_now,
             get_user_info_tools,
-            reorder_documents_tools,
+            search_notes_tool,
+            get_note_stats_tool,
+            get_today_reviews_tool,
+            mark_reviewed_tool,
+            create_note_tool,
+            get_related_notes_tool,
         ]
 
     def _get_default_middleware(self) -> List:
