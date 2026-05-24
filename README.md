@@ -1,4 +1,4 @@
-# 🚀 RAG对话系统
+# RAG NoteBook— 智能笔记助手
 
 <div align="center">
 <a href="https://github.com/zzys-cmd/Rag-notebook/stargazers">
@@ -7,8 +7,13 @@
 <a href="https://github.com/zzys-cmd/Rag-notebook/network/members">
   <img src="https://img.shields.io/github/forks/zzys-cmd/Rag-notebook?style=flat-square&label=Forks&color=green" alt="Forks">
 </a>
-  <img src="https://img.shields.io/badge/python-v3.12.4-blue.svg" alt="System">
+  <img src="https://img.shields.io/badge/python-v3.12.4-blue.svg" alt="Python">
 </div>
+
+
+AI 驱动的个人知识管理工具，融合 **笔记管理 + RAG 知识库 + 间隔重复回顾 + AI 写作辅助**，解决"笔记写了从不回看、知识散落成孤岛"的问题。
+
+---
 
 ## 📋 目录
 
@@ -24,80 +29,45 @@
 - [部署指南](#部署指南)
 - [开发指南](#开发指南)
 - [故障排除](#故障排除)
-- [文档](#文档)
 - [联系方式](#联系方式)
 
 ## 项目简介
 
-基于 **FastAPI + LangChain** 构建的企业级智能对话系统，集成先进的 **RAG（检索增强生成）** 技术，能够基于文档内容提供高精度的智能问答服务。系统采用微服务架构，具备会话持久化、多语言支持和模块化设计等特性。
+基于 **FastAPI + LangChain** 构建的智能笔记助手，核心能力包括：
+
+- **笔记管理**：Markdown 编辑器、智能标签（LLM 自动分类）、语义搜索、Markdown 导出
+- **RAG 知识库**：多格式文档上传（txt/pdf/md/pptx/docx），基于向量检索的精准问答
+- **间隔重复回顾**：艾宾浩斯遗忘曲线算法，对抗遗忘
+- **AI 写作辅助**：联机补全、续写/扩写/摘要、关联笔记推荐
+
+系统支持会话持久化（MySQL）、向量检索（ChromaDB）、JWT 用户隔离，前端采用 Vue 3 + Vant 4 移动端友好的界面。
 
 ## 核心特性
 
-- **智能问答** 💬：基于 RAG 技术，结合文档检索和大语言模型，提供精准的问答体验
-- **会话持久化** 💾：使用 MySQL 存储会话历史，支持长期保存和回溯
-- **多语言支持** 🌐：前端集成 i18n，支持中英文界面切换
-- **文档管理** 📄：前端可视化文档上传、管理(查看细致的切片、原文档等信息)
-- **安全性** ⛑️：对不同用户的知识库进行隔离，RAG检索只能检索到自己上传的文档
-- **微服务架构** 🏗️：分离的用户服务和对话服务，易于扩展和维护
-- **高性能** ⚡：基于 FastAPI 和 ChromaDB，提供卓越的性能表现
-
-## 项目架构
-
-```mermaid
-flowchart TD
-    subgraph "前端层"
-        A["用户界面 (Vue 3)"] -->|发送查询| B["API请求 (Axios)"]
-        C["会话管理 (Pinia)"] -->|状态管理| B
-        D["用户认证 (Vue Router)"] -->|路由守卫| B
-    end
-
-    subgraph "API路由层"
-        B -->|REST API| E["聊天路由 (FastAPI)"]
-        E -->|认证| F["认证中间件 (JWT)"]
-        E -->|限流| G["限流控制 (Redis)"]
-    end
-
-    subgraph "业务服务层"
-        E -->|代理查询| H["ChatService (Python)"]
-        H -->|会话管理| I["SessionManager (MySQL)"]
-        H -->|RAG检索| J["RagService (LangChain)"]
-        H -->|向量存储| K["VectorStoreService (ChromaDB)"]
-        H -->|智能代理| L["Agent (LangChain)"]
-        H -->|文档重排序| M["ReorderService (Hugging Face)"]
-    end
-
-    subgraph "数据存储层"
-        I -->|存储会话| N["MySQL数据库"]
-        K -->|向量存储| O["ChromaDB向量库"]
-        K -->|文件存储| P["文件系统"]
-        G -->|缓存| Q["Redis缓存"]
-    end
-
-    subgraph "AI模型服务"
-        L -->|LLM调用| R["DashScope API (Qwen3-Max)"]
-        J -->|嵌入模型| S["文本嵌入 (text-embedding-v4)"]
-        M -->|重排序模型| T["Qwen3-Reranker-0.6B"]
-    end
-
-    subgraph "用户服务"
-        U["Django用户服务"] -->|认证授权| F
-        U -->|用户管理| V["MySQL用户数据库"]
-    end
-```
+- **📝 笔记管理**：Markdown 编辑器（bytemd），支持新建、编辑、删除、分类筛选、分页列表
+- **🏷️ 智能标签**：保存笔记后 LLM 异步生成标签和分类（工作/学习/生活/项目），无需手动归类
+- **🔍 语义搜索**：基于向量嵌入的笔记全文搜索，告别关键词匹配
+- **🔄 间隔重复回顾**：艾宾浩斯遗忘曲线（1/2/4/7/15/30 天）
+- **✍️ AI 联机补全**：打字停顿后 Ollama 小模型实时补全，Tab 键快速采纳
+- **🤖 AI 写作助手**：续写、扩写、摘要生成，SSE 流式输出
+- **🔗 跨源关联推荐**：编辑笔记时，从笔记库和知识库双向检索 Top 3 相关文档
+- **💬 智能问答**：基于 RAG 技术的 Agent 对话，支持文档引用来源展示
+- **💾 会话持久化**：MySQL 存储对话历史，随时回溯
+- **📄 文档管理**：支持 TXT / PDF / MD / PPTX / DOCX 上传，可视化切片详情
+- **🌐 多语言支持**：前端 i18n，中英文界面切换
+- **⛑️ 安全隔离**：用户级知识库隔离，RAG 检索只能访问本人数据
+- **🏗️ 微服务架构**：分离的用户服务（Django）和对话服务（FastAPI）
 
 ## 项目演示
 
-### 主要功能界面
-
 | 功能模块 | 界面展示 | 功能说明 |
 |---------|:--------|---------|
-| AI 聊天 | ![AI聊天界面](./images/aichat.png) | 基于 RAG 的智能问答界面，支持上下文对话和文档引用 |
-| 聊天管理 | ![聊天管理界面](./images/chat_manager.png) | 会话历史管理，支持会话列表查看和切换 |
-| 用户服务 | ![用户服务界面](./images/user_service.png) | 用户注册、登录和个人信息管理 |
-| 知识库管理 | ![知识库管理页面](./images/knowledge_manager.png) | 文档上传、查看和管理知识库 |
-| 文档切片 | ![文档切片](./images/text_spliter.png) | 可视化文档切片详情，支持查看切片内容 |
-
-> **提示**：点击图片可查看大图，所有界面均支持中英文切换
+| 📒编辑 | ![笔记编辑](./images/editor_note.png) | 在线markdown编辑器，支持行内AI补全、相关笔记推荐 |
+| 📝 笔记 | ![笔记列表](./images/note.png) | 笔记列表，自动分类、打标签 |
+| 🔄 每日回顾 | ![回顾](./images/review.png) | 艾宾浩斯遗忘曲线算法 ，每日提醒需要回顾的内容 |
+| 💬 AI 聊天 | ![AI聊天](./images/aichat.png) | RAG 智能问答，支持上下文对话和文档引用 |
+| 📚 知识库 | ![知识库](./images/knowledge_manager.png) | 多格式文档上传和管理 |
+| ✂️ 文档切片 | ![切片](./images/text_spliter.png) | 可视化文档切片详情 |
 
 ## 快速开始
 
@@ -106,7 +76,7 @@ flowchart TD
 | 环境 | 版本推荐 |
 |------|----------|
 | Python | 3.12+ |
-| uv | 0.11.9   |
+| uv | 0.11.9 |
 | Node.js | 16+ |
 
 ### 克隆项目
@@ -148,7 +118,7 @@ OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL_NAME=qwen3.5:0.8b
 
 # ==================== 阿里云百炼配置 (LLM_TYPE=ALIYUN) ====================
-ALIYUN_ACCESS_KEY_SECRET=your_api_key
+ALIYUN_ACCESS_KEY=your_api_key
 ALIYUN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 CHAT_MODEL_NAME=qwen3-max
 
@@ -210,14 +180,12 @@ CELERY_RESULT_EXPIRES=3600
 REDIS_CACHE_URL=redis://localhost:6379/1
 ```
 
-配置好env文件后，我们需要执行Django ORM的迁移命令来迁移数据库表：
+配置好 env 文件后，执行 Django ORM 迁移：
 
 ```bash
 python manage.py makemigrations
 python manage.py migrate
 ```
-
-
 
 ### 向量数据库配置
 
@@ -230,7 +198,7 @@ k: 3
 
 data_path: data
 md5_hex_store: data/md5_hex_store/md5_hex_store.txt
-allow_knowledge_file_types: ["txt", "pdf"]
+allow_knowledge_file_types: ["txt", "pdf", "md", "pptx", "docx"]
 
 chunk_size: 200
 chunk_overlap: 20
@@ -255,108 +223,179 @@ separators: ["\n\n", "\n", "。", "！", "？", "!", "?", " ", ""]
 | 技术 | 说明 |
 |------|------|
 | FastAPI | 高性能异步 Web 框架 |
-| LangChain | 大语言模型应用开发框架 |
-| ChromaDB | 轻量级向量数据库 |
+| LangChain | 大语言模型应用开发框架（AgentExecutor + Tools） |
+| ChromaDB | 轻量级向量数据库（rag_collection + notes_collection） |
+| SQLAlchemy | 异步 ORM，管理 MySQL |
 | Django | 用户认证和管理系统 |
-| MySQL | 关系型数据库 |
-| Redis | 缓存数据库 |
-| DashScope API | 大语言模型服务 |
-| Hugging Face | 预训练模型服务 |
-| PyTorch | 深度学习框架 |
-| Sentence-Transformers | 句子嵌入库 |
+| MySQL | 关系型数据库（chat_history / notes / reviews） |
+| Redis | 缓存 |
+| DashScope API | 大语言模型服务（Qwen3-Max） |
+| Ollama | 本地模型部署（qwen3.5:0.8b 联机补全） |
+| Hugging Face | 重排序模型（Qwen3-Reranker-0.6B） |
+| Sentence-Transformers | 句子嵌入模型 |
 
 ### 前端技术
 
 | 技术 | 说明 |
 |------|------|
-| Vue 3 | 现代化前端框架 |
+| Vue 3 | 现代化前端框架（Composition API） |
 | Vite | 极速构建工具 |
-| Vue Router | 路由管理 |
+| Vant 4 | 移动端 UI 组件库 |
+| bytemd | Markdown 编辑器（Web Component） |
+| Vue Router | 路由管理（路由守卫 + JWT 校验） |
 | Pinia | 状态管理 |
-| i18n | 国际化支持 |
+| Vue i18n | 国际化（中/英） |
+| Axios | HTTP 客户端 |
+| highlight.js | 代码语法高亮 |
+| dompurify | HTML 安全过滤 |
 
 ## 项目结构
 
 ```
-├── backend/                  # FastAPI 后端服务
-│   ├── app/                  # 应用代码
-│   │   ├── agent/            # 智能代理模块
-│   │   ├── config/           # 配置文件目录
-│   │   ├── model/            # 数据模型定义
-│   │   ├── prompt/           # 提示词模板
-│   │   ├── rag/              # RAG 核心功能
-│   │   ├── router/           # API 路由定义
-│   │   ├── services/         # 业务服务层
-│   │   └── utils/            # 工具函数
-│   ├── data/                 # 数据存储目录
-│   ├── main.py               # 应用入口文件
-│   └── requirements.txt      # 后端依赖列表
-├── front/                    # Vue 前端项目
-│   ├── src/                  # 源代码
-│   ├── public/               # 静态资源
-│   └── package.json          # 前端依赖配置
-├── DjangoUserService/        # Django 用户服务
-└── README.md                 # 项目说明文档
+├── backend/                     # FastAPI 后端服务
+│   ├── app/
+│   │   ├── agent/               # Agent 智能代理模块
+│   │   │   └── agent.py         # AgentFactory + Tool 定义
+│   │   ├── config/              # 配置文件（chroma.yaml 等）
+│   │   ├── core/                # 核心工具（限流、响应封装、日志）
+│   │   ├── db/                  # 数据库配置（MySQL + Redis）
+│   │   ├── model/               # SQLAlchemy ORM 模型
+│   │   │   ├── note.py          # 笔记模型
+│   │   │   ├── review_record.py # 回顾记录模型
+│   │   │   └── chat_history.py  # 对话历史模型
+│   │   ├── prompt/              # 提示词模板（8个）
+│   │   ├── rag/                 # RAG 核心功能
+│   │   │   ├── rag_service.py   # RAG 服务（HyDE + 混合检索）
+│   │   │   ├── reorder_service.py
+│   │   │   ├── vector_store.py  # ChromaDB 封装
+│   │   │   ├── text_spliter.py  # 文档切片
+│   │   │   ├── document_handler/# 文档解析（txt/pdf/md/pptx/docx）
+│   │   │   ├── retrievers/      # 自定义检索器
+│   │   │   └── task_queue.py    # 后台处理队列
+│   │   ├── router/              # API 路由
+│   │   │   ├── chat.py          # 聊天 & Agent 路由
+│   │   │   ├── note_router.py   # 笔记 CRUD & AI 路由
+│   │   │   ├── review_router.py # 间隔重复回顾路由
+│   │   │   ├── knowledge_router.py
+│   │   │   ├── user.py
+│   │   │   └── health.py
+│   │   ├── schemas/             # Pydantic 数据模型
+│   │   ├── services/            # 业务服务层
+│   │   │   ├── note_service.py  # 笔记服务（CRUD + 向量化 + AI 写作）
+│   │   │   └── review_service.py# 回顾服务（艾宾浩斯算法）
+│   │   └── utils/               # 工具函数
+│   ├── data/                    # 数据存储目录
+│   ├── main.py                  # 应用入口
+│   └── pyproject.toml
+├── front/                       # Vue 3 前端项目
+│   ├── src/
+│   │   ├── components/          # 通用组件
+│   │   │   ├── MarkdownEditor.vue   # bytemd 封装
+│   │   │   ├── RelatedNotes.vue     # 关联笔记侧边栏
+│   │   │   ├── InlineCompletion.vue # AI 联机补全
+│   │   │   ├── ReviewCard.vue       # 回顾卡片
+│   │   │   ├── TagBadge.vue         # 标签徽章
+│   │   │   ├── TabBar.vue           # 底部导航
+│   │   │   └── QuickToolbar.vue     # 快捷工具栏
+│   │   ├── views/              # 页面视图
+│   │   │   ├── NoteEditor.vue       # 笔记编辑器
+│   │   │   ├── NoteList.vue         # 笔记列表
+│   │   │   ├── DailyReview.vue      # 每日回顾
+│   │   │   ├── AIChat.vue           # AI 聊天
+│   │   │   ├── Sessions.vue         # 会话管理
+│   │   │   ├── KnowledgeBase.vue    # 知识库管理
+│   │   │   ├── Login.vue / Register.vue
+│   │   │   ├── My.vue / Profile.vue / Settings.vue
+│   │   │   └── AboutUs.vue
+│   │   ├── router/index.js     # 路由配置
+│   │   ├── store/              # Pinia 状态管理
+│   │   ├── i18n/               # 国际化（中/英）
+│   │   └── config/api.js       # API 地址配置
+│   └── package.json
+├── DjangoUserService/           # Django 用户服务
+│   ├── apps/
+│   │   ├── user/               # 用户注册/登录/认证
+│   │   ├── file/               # 头像上传
+│   │   └── utils/              # 工具函数
+│   └── api.md                  # 用户服务 API 文档
+├── docs/                        # 项目文档
+│   ├── modelscope_model.md     # 模型下载和配置
+│   └── troubleshooting.md      # 故障排除
+├── images/                      # 截图资源
+└── plan.md                     # 项目规划
 ```
 
-## API文档
+## API 文档
 
 ### FastAPI 后端 API
 
-- **[API 规范](./backend/openapi.json)**：后端 OpenAPI 规范文件
-- **[交互式文档](http://localhost:8000/docs)**：启动服务后访问自动生成的交互式文档
+完整的 OpenAPI 规范文件：[backend/openapi.json](./backend/openapi.json)
+		启动服务后访问交互式文档：[http://localhost:8000/docs](http://localhost:8000/docs)
 
 ### Django 用户服务 API
 
-- **[API 文档](./DjangoUserService/api.md)**：详细的用户服务 API 文档
-- **[交互式文档](http://localhost:8001/api/)**：启动服务后访问用户服务 API 文档
+详细文档：[DjangoUserService/api.md](./DjangoUserService/api.md)
+		交互式文档（启动后）：[http://localhost:8001/docs/](http://localhost:8001/docs/)
+
+## 配置说明
+
+### LLM 模型切换
+
+系统支持 **阿里云百炼（DashScope）** 和 **Ollama（本地部署）**两种模式：
+
+- **LLM_TYPE=ALIYUN**：使用 Qwen3-Max 大模型 + text-embedding-v4 嵌入
+- **LLM_TYPE=OLLAMA**：使用本地 Ollama 模型（推荐 qwen3.5:0.8b）
+
+### 重排序模型
+
+下载 Qwen3-Reranker-0.6B 模型并配置 `RERANKER_MODEL_PATH` 路径，参考 [模型配置指南](./docs/modelscope_model.md)。
 
 ## 开发指南
 
-### 代码结构说明
+### 核心模块说明
 
-- `backend/app/rag/`：RAG 核心功能，包括向量存储和检索
-- `backend/app/agent/`：智能代理，处理用户请求和对话逻辑
-- `backend/app/services/`：业务服务层，提供会话管理等功能
-- `backend/app/utils/`：工具函数，包括配置加载、文件处理等
-- `front/src/views/`：前端页面组件
-- `front/src/components/`：可复用的前端组件
+- `backend/app/services/note_service.py`：笔记 CRUD + 向量化 + AI 写作 + 语义搜索
+- `backend/app/services/review_service.py`：艾宾浩斯间隔重复算法
+- `backend/app/agent/`：AgentExecutor + 自定义工具
+- `backend/app/rag/`：HyDE 检索增强、ChromaDB 向量存储、文档解析
+- `backend/app/prompt/`：8 个提示词模板（主对话、RAG 摘要、自动标签、联机补全等）
 
-### 开发流程
+### 数据库表
 
-1. **添加新功能**
-   - 在对应的模块中添加代码
-   - 运行测试确保功能正常
-   - 更新相关文档
+| 表名 | 说明 | 核心字段 |
+|------|------|---------|
+| `notes` | 笔记 | user_id, title, content, tags(JSON), category |
+| `review_records` | 回顾记录 | note_id(FK), last_reviewed_at, next_review_at, interval_days, review_count |
+| `chat_history` | 聊天历史 | session_id, user_id, role, content, timestamp |
+| `md5_records` | 文档去重 | md5_value, user_id, filename |
 
-2. **调试技巧**
-   - 使用 FastAPI 的自动重载功能：`uvicorn main:app --reload`
-   - 使用 Vue 的热更新功能：`npm run dev`
+### 前端路由
+
+| 路径 | 页面 | 说明 |
+|------|------|------|
+| `/` | 重定向到 `/notes` | 默认首页为笔记列表 |
+| `/notes` | 笔记列表 | 分页展示 + 分类筛选 |
+| `/notes/:id` | 笔记编辑器 | Markdown 编辑 + 关联推荐 |
+| `/review` | 每日回顾 | 艾宾浩斯回顾卡片 |
+| `/chat` | AI 聊天 | RAG 智能问答 |
+| `/knowledge` | 知识库管理 | 文档上传/查看 |
+| `/sessions` | 会话管理 | 聊天历史列表 |
 
 ## 故障排除
 
 详细的故障排除指南请参考：[故障排除](./docs/troubleshooting.md)
 
-## 文档
+常见问题：
 
-项目文档位于 `docs/` 目录：
-
-- **[ModelScope 模型配置](./docs/modelscope_model.md)**：详细的模型下载和配置说明
-- **[故障排除](./docs/troubleshooting.md)**：常见问题和解决方案
-- **[API 文档](./backend/openapi.json)**：后端 API 接口文档
-- **[用户服务 API](./DjangoUserService/api.md)**：用户服务 API 文档
-
-## Star History
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=zzys-cmd/Rag-notebook&type=date&theme=dark&legend=top-left" />
-  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=zzys-cmd/Rag-notebook&type=date&legend=top-left" />
-  <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=zzys-cmd/Rag-notebook&type=date&legend=top-left" />
-</picture>
+- **API Key 错误**：检查 ALIYUN_ACCESS_KEY 是否正确配置
+- **数据库连接失败**：确认 MySQL / Redis 服务已启动
+- **ChromaDB 异常**：检查 `chroma.yaml` 中的路径配置
+- **重排序模型加载失败**：确认 `RERANKER_MODEL_PATH` 指向正确的模型路径
+- **Ollama 连接失败**：确认 `ollama serve` 已运行且模型已拉取
 
 ## 联系方式
 
-如有任何问题或建议，欢迎在 GitHub 提交 issues 或联系作者：
+如有任何问题或建议，欢迎提交 GitHub Issues 或联系作者：
 
 - Email: 1765413309@qq.com
 - QQ: 1765413309
