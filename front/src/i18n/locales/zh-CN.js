@@ -40,8 +40,8 @@ export default {
     }
   },
   aiChat: {
-    title: 'AI问答',
-    placeholder: '请输入您的问题...',
+    title: '智能笔记',
+    placeholder: '请输入您的笔记问题...',
     send: '发送',
     thinking: 'AI思考中...'
   },

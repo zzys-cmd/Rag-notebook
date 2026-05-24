@@ -40,8 +40,8 @@ export default {
     }
   },
   aiChat: {
-    title: 'AI Chat',
-    placeholder: 'Enter your question...',
+    title: 'AI Note Assistant',
+    placeholder: 'Ask about your notes...',
     send: 'Send',
     thinking: 'AI is thinking...'
   },
