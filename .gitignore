@@ -93,6 +93,6 @@ ehthumbs_vista.db
 *.tmp
 *.temp
 
-# Docker
-Dockerfile
-.dockerignore
+# CodeGraph index
+.codegraph/
+
