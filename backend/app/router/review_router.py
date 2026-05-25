@@ -1,5 +1,5 @@
 """
-回顾提醒 API 路由 —— 今日回顾列表、标记已回顾。
+回顾提醒 API 路由 —— 今日回顾列表、标记已回顾、获取回顾选择题。
 """
 from fastapi.routing import APIRouter
 from fastapi import Depends
@@ -42,3 +42,17 @@ async def mark_reviewed(
     if result["success"]:
         return success_response(message=result["message"], data=result)
     return success_response(message=result["message"])
+
+
+@review_router.get("/question/{note_id}")
+async def get_review_question(
+    note_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    根据笔记内容生成一道回顾选择题。
+    返回 {question, choices, answer} 结构。
+    """
+    question_data = await review_service.get_review_question_for_note(db, note_id, user_id)
+    return success_response(data=question_data)
