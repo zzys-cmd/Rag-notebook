@@ -1,6 +1,7 @@
 """
 回顾服务层 —— 艾宾浩斯间隔重复算法 + 回顾问题生成。
 """
+import json
 import uuid
 from datetime import datetime, timedelta
 from typing import List
@@ -111,11 +112,12 @@ class ReviewService:
             "next_review_at": str(next_at),
         }
 
-    async def generate_review_question(self, content: str) -> str:
+    async def generate_review_question(self, content: str) -> dict:
         """
-        调用 LLM 根据笔记内容生成回顾问题。
-        使用惰性导入避免模块级循环依赖。
+        调用 LLM 根据笔记内容生成回顾选择题。
+        返回 {question, choices, answer} 结构。
         """
+        raw = ""
         try:
             from app.utils.factory import chat_model
             from app.utils.prompt_loader import load_prompt
@@ -124,10 +126,51 @@ class ReviewService:
             prompt_template = load_prompt("review_question_prompt")
             prompt = prompt_template.format(content=content[:2000])
             response = await chat_model.ainvoke([HumanMessage(content=prompt)])
-            return response.content.strip()
+            raw = response.content.strip()
+            logger.debug(f"LLM 原始响应: {raw[:500]}")
+
+            # 尝试从 markdown 代码块中提取 JSON
+            if "```json" in raw:
+                raw = raw.split("```json")[1].split("```")[0].strip()
+            elif "```" in raw:
+                raw = raw.split("```")[1].split("```")[0].strip()
+            # 如果还有前置文本，找到第一个 { 开始解析
+            brace_start = raw.find("{")
+            if brace_start > 0:
+                raw = raw[brace_start:]
+            data = json.loads(raw)
+            logger.debug(f"解析后的JSON: {data}")
+
+            return {
+                "question": data["question"],
+                "choices": data["choices"],
+                "answer": data["answer"],
+            }
         except Exception as e:
-            logger.error(f"生成回顾问题失败: {e}")
-            return "请回顾这篇笔记的主要内容"
+            logger.error(f"生成回顾问题失败: {e} | raw={raw[:300]}")
+            return {
+                "question": "请回顾这篇笔记的主要内容",
+                "choices": ["不太确定", "需要复习", "基本掌握", "完全理解"],
+                "answer": "基本掌握",
+            }
+
+    async def get_review_question_for_note(
+        self, db: AsyncSession, note_id: str, user_id: str
+    ) -> dict:
+        """
+        根据 note_id 查询笔记内容，生成回顾选择题。
+        同时校验笔记归属。
+        """
+        stmt = select(Note).where(Note.id == note_id, Note.user_id == user_id)
+        result = await db.execute(stmt)
+        note = result.scalar_one_or_none()
+        if not note:
+            return {
+                "question": "笔记不存在",
+                "choices": [],
+                "answer": "",
+            }
+        return await self.generate_review_question(note.content or "")
 
 
 review_service = ReviewService()
