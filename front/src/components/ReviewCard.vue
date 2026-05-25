@@ -10,6 +10,7 @@
       <TagBadge v-for="t in tags" :key="t" :tag="t" />
     </div>
     <div class="review-actions" v-if="!done">
+      <van-button size="small" type="primary" @click.stop="$emit('review-now')">立即回顾</van-button>
       <van-button size="small" plain type="primary" @click.stop="$emit('done')">已回顾</van-button>
       <van-button size="small" plain type="default" @click.stop="$emit('skip')">跳过</van-button>
     </div>
@@ -32,7 +33,7 @@ defineProps({
   done: { type: Boolean, default: false },
 })
 
-defineEmits(['done', 'skip', 'click'])
+defineEmits(['done', 'skip', 'click', 'review-now'])
 
 const categoryMap = { work: '工作', study: '学习', life: '生活', project: '项目' }
 </script>
