@@ -57,5 +57,6 @@ export const apiConfig = {
     // 回顾提醒
     reviewToday: '/review/today',
     reviewDone: (noteId) => `/review/done/${noteId}`,
+    reviewQuestion: (noteId) => `/review/question/${noteId}`,
   }
 }
