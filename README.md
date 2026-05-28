@@ -376,3 +376,8 @@ separators: ["\n\n", "\n", "。", "！", "？", "!", "?", " ", ""]
    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=zzys-cmd/Rag-notebook&type=date&legend=top-left" />
    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=zzys-cmd/Rag-notebook&type=date&legend=top-left" />
  </picture>
+
+
+## License
+
+本项目基于MIT开源协议， [点击跳转LICENSE](LICENSE) 
