@@ -1,368 +1,292 @@
-# RAG NoteBook— 智能笔记助手
+# RAG NoteBook · 智能笔记助手
 
 <div align="center">
-<a href="https://github.com/zzys-cmd/Rag-notebook/stargazers">
-  <img src="https://img.shields.io/github/stars/zzys-cmd/Rag-notebook?style=flat-square&label=Stars&color=orange" alt="Stars">
-</a>
-<a href="https://github.com/zzys-cmd/Rag-notebook/network/members">
-  <img src="https://img.shields.io/github/forks/zzys-cmd/Rag-notebook?style=flat-square&label=Forks&color=green" alt="Forks">
-</a>
-<a href="https://github.com/zzys-cmd/Rag-notebook/actions/workflows/ci.yml">
-  <img src="https://github.com/zzys-cmd/Rag-notebook/actions/workflows/ci.yml/badge.svg" alt="CI">
-</a>
-  <img src="https://img.shields.io/badge/python-v3.12.4-blue.svg" alt="Python">
+
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.123-009688?style=flat-square&logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)
+![Neo4j](https://img.shields.io/badge/Neo4j-5.26-008CC1?style=flat-square&logo=neo4j&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
+
 </div>
 
-AI 驱动的个人知识管理工具，融合 **笔记管理 + neo4j知识图谱 + GraphRAG + AI 写作辅助**，解决"笔记写了从不回看、知识散落成孤岛"的问题。
+笔记写完就沉底，文档存着不回顾，知识散成一座座孤岛。RAG NoteBook 把**笔记**和**知识库**放进同一套检索链路：上传的文档和随手记下的笔记都会被切片、向量化、抽成实体与关系写进图数据库；提问时先由模型规划检索策略，再从笔记与文档里召回证据、沿图谱补全上下文，最后交给 Agent 作答并标出引用来源。
+
+RAG 是这套系统的引擎，笔记和图谱是它服务的对象，不是并列的三个功能。
 
 ---
 
-## 📋 目录
+## 目录
 
-- [项目简介](#项目简介)
-- [核心特性](#核心特性)
-- [项目架构](#项目架构)
-- [项目演示](#项目演示)
+- [功能特性](#功能特性)
+- [系统架构](#系统架构)
+- [界面预览](#界面预览)
 - [快速开始](#快速开始)
 - [技术栈](#技术栈)
-- [项目结构](#项目结构)
-- [API 文档](#api文档)
+- [目录结构](#目录结构)
+- [API 一览](#api-一览)
+- [实现要点](#实现要点)
 - [配置说明](#配置说明)
-- [部署指南](#部署指南)
-- [开发指南](#开发指南)
-- [故障排除](#故障排除)
-- [联系方式](#联系方式)
+- [测试](#测试)
+- [常见问题](#常见问题)
+- [致谢与许可](#致谢与许可)
 
-## 项目简介
+## 功能特性
 
-基于 **FastAPI + LangChain** 构建的智能笔记助手，核心能力包括：
+| 模块 | 能力 | 代码位置 |
+|------|------|----------|
+| **笔记管理** | Tiptap 富文本 + Markdown、`[[双链]]`、大纲跳转、分类与置顶、批量删除/下载/改分类、导出 `.md` | `app/router/note_router.py` |
+| **智能标签** | 保存后异步调 LLM 打标签并归入工作/学习/生活/项目 | `POST /note/{note_id}/auto-tag` |
+| **语义搜索** | Neo4j 向量索引与全文索引双路召回，RRF 融合排序 | `GET /note/search` |
+| **间隔重复** | 艾宾浩斯曲线 1/2/4/7/15/30 天，每日到期清单 + 自测题 + 标记已复习 | `app/services/review_service.py` |
+| **AI 写作辅助** | 打字停顿后实时补全（Tab 采纳）、续写/扩写/摘要，SSE 流式返回 | `POST /note/autocomplete`、`/note/assist/stream` |
+| **关联推荐** | 编辑笔记时从笔记库与知识库双向召回 Top-k 相关片段 | `GET /note/{note_id}/related` |
+| **知识库** | TXT/PDF/MD/PPTX/DOCX 上传、MD5 去重、切片详情可视化、按文件名或 MD5 删除 | `app/router/knowledge_router.py` |
+| **知识图谱** | LLM 抽取实体与关系、画布浏览、实体合并/编辑、类型管理、抽取日志 | `app/graph/routers/graph_router.py` |
+| **智能问答** | Agent 工具调用 + 人工审批 + 图谱引导 RAG，SSE 流式，回答附来源 | `app/router/chat.py` |
+| **用户与隔离** | JWT 登录/注册/刷新令牌、头像上传；所有查询按 `user_id` 隔离 | `app/router/user.py` |
+| **多语言** | 中/英界面切换 | `front/src/i18n` |
 
-- **RAG 知识库**：多格式文档上传（txt/pdf/md/pptx/docx），自动构建知识图谱，图谱引导的混合检索问答
-- **笔记管理**：Markdown 编辑器、笔记自动写入知识图谱、智能标签（LLM 自动分类）、语义搜索、Markdown 导出
-- **间隔重复回顾**：艾宾浩斯遗忘曲线算法，对抗遗忘
-- **AI 写作辅助**：联机补全、续写/扩写/摘要、关联笔记推荐
+## 系统架构
 
-系统支持会话持久化（MySQL）、向量检索（Neo4j 知识图谱）、JWT 用户隔离，前端采用React+Tailwind CSS构建现代化界面。
+```mermaid
+flowchart LR
+    U[浏览器] --> F["front · React 19<br/>Vite 开发 / nginx 托管"]
+    F -->|"HTTP / SSE"| B["backend · FastAPI"]
+    B --> M[("MySQL 8<br/>会话 · 笔记 · 回顾<br/>图谱任务表")]
+    B --> N[("Neo4j 5<br/>实体 · 关系 · Chunk")]
+    B --> R[("Redis 7<br/>缓存")]
+    B -->|"OpenAI 兼容协议"| L["LLM / Embedding<br/>/ Rerank API"]
+```
 
-## 核心特性
+一次提问会穿过三层：
 
-- **📝 笔记管理**：Markdown 编辑器，支持新建、编辑、删除、分类筛选、分页列表
-- **🏷️ 智能标签**：保存笔记后 LLM 异步生成标签和分类（工作/学习/生活/项目），无需手动归类
-- **🔍 语义搜索**：Neo4j 向量 + 全文混合检索（RRF 融合），笔记/知识库统一召回
-- **🕸️ 知识图谱**：LLM 抽取实体与关系存入 Neo4j，可视化画布浏览，检索时沿图扩展证据
-- **✍️ AI 联机补全**：打字停顿后模型实时补全，Tab 键快速采纳
-- **🤖 AI 写作助手**：续写、扩写、摘要生成，SSE 流式输出
-- **🔗 跨源关联推荐**：编辑笔记时，从笔记库和知识库双向检索 Top k 相关文档
-- **💬 智能问答**：图谱引导的 Agentic RAG 对话，回答附知识图谱与笔记来源引用
-- **💾 会话持久化**：MySQL 存储对话历史，随时回溯
-- **📄 文档管理**：支持 TXT / PDF / MD / PPTX / DOCX 上传，可视化切片详情
-- **🌐 多语言支持**：前端 i18n，中英文界面切换
-- **⛑️ 安全隔离**：用户级知识库隔离，RAG 检索只能访问本人数据
+1. **Agent 层**（`app/agent/`）——`create_agent` 编译的 LangGraph 图，挂了搜索笔记、创建笔记、查回顾、查时间等工具，状态存 MySQL checkpoint，写操作走人工审批。
+2. **检索层**（`app/rag/agentic_rag/`）——planner 出检索计划，图检索与文本检索并行执行，evaluator 判断证据够不够，最后融合成一段 context。
+3. **存储层**——MySQL 存业务数据与任务，Neo4j 存知识图谱和 Chunk 向量，Redis 做缓存。
 
-## 项目演示
+## 界面预览
 
-| 功能模块 | 界面展示 |
-|---------|:--------|
-| 笔记编辑 | ![笔记编辑](./images/editor_note.png) |
-| 笔记列表 | ![笔记列表](./images/note.png) |
-| 知识库 | ![知识库](./images/knowledge_manager.png) |
-| 知识图谱 | ![知识图谱](./images/knowledge_graph.png) |
-| 对话检索（**图谱引导 RAG，回答附来源引用**） | ![AI 聊天](./images/aichat.png) |
+| 笔记编辑 | 知识库 |
+|:--:|:--:|
+| ![笔记编辑](images/editor_note.png) | ![知识库](images/knowledge_manager.png) |
+
+| 笔记列表 | 切片详情 |
+|:--:|:--:|
+| ![笔记列表](images/note.png) | ![切片详情](images/text_spliter.png) |
+
+| 知识图谱 | 对话检索 |
+|:--:|:--:|
+| ![知识图谱](images/knowledge_graph.png) | ![对话检索](images/aichat.png) |
 
 ## 快速开始
 
-> 💡 想最快跑起来？直接用下方 **Docker 一键启动**，无需安装 Python / Node / MySQL / Redis / Neo4j。
+### 方式一：Docker 一键启动（推荐）
 
-### Docker 一键启动（推荐）
-
-前置要求：已安装 [Docker Desktop](https://www.docker.com/products/docker-desktop/) 并启动引擎；建议内存 ≥ 4GB；首次构建约 10 分钟（后端依赖较大）。
+前置：已安装并启动 [Docker Desktop](https://www.docker.com/products/docker-desktop/)，建议内存 ≥ 4GB；首次构建约 10 分钟（后端依赖含 torch 相关包，体积较大）。
 
 ```bash
-git clone https://github.com/zzys-cmd/Rag-notebook
+git clone https://github.com/zzys-cmd/Rag-notebook.git
 cd Rag-notebook
+cp backend/.env.example backend/.env     # 填入 OPENAI_BASE_URL / OPENAI_API_KEY / OPENAI_MODEL_NAME
 ```
 
-**Windows**：直接双击（或在终端运行）根目录 `start.bat`——自动生成 `backend/.env`（如不存在）、构建并启动全部 5 个容器、等待后端就绪后打开浏览器。
+**Windows**：双击根目录 `start.bat`，脚本会自动生成 `backend/.env`（若不存在）、构建并启动 5 个容器、等后端就绪后打开浏览器。
 
-**Linux / macOS**（手动方式，`start.bat` 仅 Windows）：
+**Linux / macOS**：
 
 ```bash
-# 1. 生成环境变量文件并填入模型 Key
-cp backend/.env.example backend/.env
-#    编辑 backend/.env，至少填写 OPENAI_BASE_URL / OPENAI_API_KEY / OPENAI_MODEL_NAME
-# 2. 构建并启动（可选：改库密码在根目录 .env 中覆盖 MYSQL_ROOT_PASSWORD / NEO4J_PASSWORD）
 docker compose up -d --build
 ```
 
-启动完成后：
-
 | 入口 | 地址 | 说明 |
 |------|------|------|
-| 前端页面 | http://localhost:3000 | 默认账号 `admin / admin1234`（后端启动时自动创建） |
-| 后端 API 文档 | http://localhost:8000/docs | 便于调试 |
+| 前端 | http://localhost:3000 | 默认账号 `admin / admin1234`（后端启动时自动创建） |
+| API 文档 | http://localhost:8000/docs | 交互式调试 |
 
-常用操作：
+常用命令：
 
 ```bash
-docker compose up -d          # 启动（重启电脑后恢复用）
-docker compose down           # 停止（数据保留）
-docker compose logs -f backend   # 查看后端日志
-docker compose restart backend   # 修改 backend/.env 的模型 Key 后使其生效
+docker compose up -d              # 启动（重启电脑后恢复用）
+docker compose down               # 停止，数据保留
+docker compose logs -f backend    # 看后端日志
+docker compose restart backend    # 改完 backend/.env 后生效
+docker compose down -v            # 清空数据卷重来（慎用）
 ```
 
-> **重要**：模型密钥通过 `backend/.env` 挂载注入（已 .gitignore，不会进入镜像），容器内 MySQL / Redis / Neo4j 的地址与密码由 `docker-compose.yml` 自动接管，无需也不应修改 `.env` 中的 localhost 配置；未配置 LLM Key 时服务可正常启动浏览，但问答等 AI 功能不可用。
->
-> 数据持久化：MySQL / Redis / Neo4j 数据在 Docker 数据卷中，上传文件/日志在 `backend/media`、`backend/logs`、`backend/data` 目录。彻底重置全部数据：`docker compose down -v`（慎用，会清空数据库）。
+模型密钥通过 `backend/.env` 挂载注入，不进镜像；容器内 MySQL / Redis / Neo4j 的地址与密码由 `docker-compose.yml` 强制覆盖，`.env` 里那几项 `localhost` 配置在 Docker 模式下不生效也无需修改。未填 LLM Key 时服务能正常启动浏览，只是 AI 功能不可用。
 
-### 本地开发（非 Docker）
+### 方式二：本地开发
 
-#### 环境要求
-
-| 环境 | 版本推荐 |
-|------|----------|
+| 依赖 | 版本 |
+|------|------|
 | Python | 3.12+ |
-| uv | 0.11.9 |
-| Node.js | 16+ |
-
-#### 克隆项目
+| uv | 0.12+ |
+| Node.js | 20.19+ 或 22+（CI 用 22） |
 
 ```bash
-git clone https://github.com/zzys-cmd/Rag-notebook
-cd Rag-notebook
-```
-
-#### 安装依赖
-
-##### 后端依赖
-```bash
+# 后端
 cd backend
-uv sync --extra dev
-```
+uv sync                                   # 含文档解析组（unstructured + torch，体积较大）
+cp .env.example .env                      # 填写 LLM Key 与本机数据库地址
+uvicorn main:app --reload                 # http://localhost:8000
 
-> 说明：文档解析依赖（`unstructured` + torch，数 GB）放在 `parsers`
-> 依赖组中，**默认随 `uv sync` 一起安装**，本地/Docker 行为不变；
-> CI 用 `uv sync --extra dev --no-group parsers` 跳过它以保持快速。
-
-##### 前端依赖
-```bash
+# 前端（另开一个终端）
 cd front
 npm install
+npm run dev                               # http://localhost:3000，已配好到 8000 的代理
 ```
 
-#### 环境配置
+本地模式需要自己起 MySQL、Redis、Neo4j，并且在 `backend/.env` 里把 `MYSQL_*` / `REDIS_*` / `NEO4J_*` 改成实机地址。
 
-##### 创建后端环境变量文件
-
-在 `backend` 目录下创建 `.env` 文件，参考 `.env.example` 文件填写配置：
-
-```env
-# ==================== 对话模型（OpenAI 兼容协议，必填） ====================
-# 任意兼容服务：OpenAI / DeepSeek / 百炼 compatible-mode / 智谱 / Moonshot / Ollama /v1
-OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-OPENAI_API_KEY=your_api_key
-OPENAI_MODEL_NAME=qwen3-max
-
-# ==================== 嵌入模型（可选；留空回落 OPENAI_*） ====================
-# EMBED_BASE_URL=
-# EMBED_API_KEY=
-# EMBED_MODEL_NAME=text-embedding-v3
-
-# ==================== 云端重排序（可选；失败时按原顺序降级） ====================
-RERANKER_API_BASE_URL=https://api.siliconflow.cn/v1
-RERANKER_API_KEY=sk-xxx
-RERANKER_MODEL=BAAI/bge-reranker-v2-m3
-
-# ==================== 数据库配置 ====================
-MYSQL_USER=root
-MYSQL_PASSWORD=root
-MYSQL_HOST=localhost
-MYSQL_PORT=3306
-MYSQL_DATABASE=chat_history
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_DB=0
-
-# 联网搜索。因为tavily现在每个月有1000次的免费额度，所以这里默认使用的是tavily
-WEB_SEARCH_ENABLED=false
-# WEB_SEARCH_PROVIDER=tavily
-# WEB_SEARCH_API_KEY=
-
-# ==================== Neo4j 知识图谱数据库 ====================
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=your_password
-
-# ==================== JWT 身份验证配置 ====================
-SECRET_KEY=MY_JWT_SECRET_KEY
-ALGORITHM=HS256
-```
-
-> 完整配置项（视觉模型、联网搜索兜底、跨平台混搭示例等）见 [backend/.env.example](./backend/.env.example)。
-
-#### 启动服务
-
-| 服务 | 命令 | 端口 |
-|------|------|------|
-| 后端服务 | `cd backend && uvicorn main:app --reload` | 8000 |
-| 前端服务 | `cd front && npm run dev` | 3000 |
-
-| MySQL | `net start mysql` | 3306 |
-| Redis | `redis-server` 或 `net start redis` | 6379 |
-| Ollama（如果使用） | `ollama serve` | 11434 |
+> 只想跑测试可以在 `uv sync` 后加 `--no-group parsers` 跳过数 GB 的解析依赖，CI 就是这么做的。
 
 ## 技术栈
 
-### 后端技术
+**后端**
 
-| 技术 | 说明 |
-|------|------|
-| FastAPI | 高性能异步 Web 框架 |
-| LangChain | 大语言模型应用开发框架（create_agent + Tools） |
-| Neo4j | 图数据库：知识图谱存储 + Chunk 向量/全文检索 |
-| SQLAlchemy | 异步 ORM，管理 MySQL |
+| 技术 | 版本 | 用途 |
+|------|------|------|
+| FastAPI | 0.123 | 异步 Web 框架 |
+| LangChain / LangGraph | 1.2 / langgraph-cli 0.1.54 | Agent 编排、工具调用、中断恢复 |
+| Neo4j | 5.26 | 知识图谱存储 + 向量/全文混合检索 |
+| SQLAlchemy（async） | 2.0.48 | MySQL 异步 ORM |
+| MySQL | 8.0 | 会话、笔记、回顾、图谱任务表 |
+| Redis | 7 | 缓存 |
+| aiosqlite / pytest | — | 测试用内存库 + 552 个测试函数 |
+| OpenAI 兼容 API | — | 对话 / 视觉 / 嵌入 / 重排，可跨平台混搭 |
 
-| MySQL | 关系型数据库（chat_history / notes / reviews） |
-| Redis | 缓存 |
-| OpenAI 兼容 API | LLM 服务（DashScope / DeepSeek / SiliconFlow / Ollama 任选） |
-| 云端 rerank API | 重排序服务（SiliconFlow / Jina / Cohere 兼容） |
+**前端**
 
-### 前端技术
+| 技术 | 版本 | 用途 |
+|------|------|------|
+| React + TypeScript | 19.2 / 6.0 | 界面框架 |
+| Vite | 8.0 | 构建与开发服务器 |
+| Tailwind CSS + Radix UI | 3.4 / 1.x | 样式与无头组件 |
+| Tiptap | 2.27 | 富文本编辑器（含表格、代码块、图片、任务列表） |
+| AntV G6 + d3-force | 5.1 / 3.0 | 知识图谱画布 |
+| Zustand | 5.0 | 状态管理 |
+| i18next | 26.3 | 中英国际化 |
+| react-markdown + rehype-highlight | 10.1 / 7.0 | Markdown 渲染与代码高亮 |
 
-| 技术 | 说明 |
-|------|------|
-| React 19 | 现代化前端框架 |
-| TypeScript | 类型安全 |
-| Vite | 极速构建工具 |
-| Tailwind CSS | 原子化 CSS 框架 |
-| Radix UI | 无头 UI 组件库 |
-| Tiptap | 富文本 Markdown 编辑器 |
-| React Router DOM | 路由管理（路由守卫 + JWT 校验） |
-| Zustand | 轻量状态管理 |
-| i18next | 国际化（中/英） |
-| Axios | HTTP 客户端 |
-| react-markdown + rehype-highlight | Markdown 渲染与代码高亮 |
-| dompurify | HTML 安全过滤 |
-
-## 项目结构
+## 目录结构
 
 ```
-├── backend/                     # FastAPI 后端服务
+.
+├── backend/
 │   ├── app/
-│   │   ├── agent/               # Agent 智能代理（create_agent + 工具定义）
-│   │   ├── cache/               # Redis 缓存装饰器
-│   │   ├── config/              # 配置文件（document.yaml 等）
-│   │   ├── core/                # 核心设施（settings 配置中心、限流、响应封装、日志、后台初始化）
-│   │   ├── db/                  # 数据库配置（MySQL + Redis）
-│   │   ├── graph/               # 知识图谱模块
-│   │   │   ├── extraction/      # LLM 实体抽取 + Chunk 规则匹配
-│   │   │   ├── routers/         # 图谱 API（总览/实体/关系/检索/SSE 事件）
-│   │   │   ├── services/        # 抽取管线 + 构建任务 worker
-│   │   │   └── storage/         # Neo4j 驱动与 GraphStore 实现
-│   │   ├── models/              # SQLAlchemy ORM 模型（笔记/回顾/对话/图谱任务等）
-│   │   ├── prompt/              # 提示词模板
-│   │   ├── rag/                 # RAG 核心功能
-│   │   │   ├── agentic_rag/     # Agentic RAG（规划/检索/证据融合/联网兜底）
-│   │   │   ├── reorder_service.py # 云端重排序服务
-│   │   │   ├── vector_store.py  # 知识库文档服务（切片/MD5/Neo4j 读取）
-│   │   │   ├── text_spliter.py  # 文档切片
-│   │   │   ├── document_handler/# 文档解析（txt/pdf/md/pptx/docx）
-│   │   │   └── md5_manager/     # 上传去重记录
-│   │   ├── router/              # API 路由（聊天/笔记/回顾/知识库/笔记模板/用户/健康）
-│   │   ├── schemas/             # Pydantic 数据模型
-│   │   ├── services/            # 业务服务层（笔记/回顾/笔记模板/会话管理）
-│   │   └── utils/               # 工具函数
-│   ├── data/                    # 数据存储目录
-│   ├── Dockerfile               # 后端容器镜像
-│   ├── .dockerignore
-│   ├── main.py                  # 应用入口
+│   │   ├── agent/                # Agent 工厂、中间件、工具、MySQL checkpoint
+│   │   ├── cache/                # Redis 缓存装饰器
+│   │   ├── config/               # document.yaml（切片参数、允许的文件类型）
+│   │   ├── core/                 # 配置中心、日志、限流、异常处理、后台初始化
+│   │   ├── db/                   # MySQL / Redis 连接
+│   │   ├── graph/
+│   │   │   ├── extraction/       # LLM 实体抽取、Chunk 匹配、链接解析
+│   │   │   ├── routers/          # 图谱 API（总览/实体/关系/类型/检索/日志）
+│   │   │   ├── services/         # 抽取管线、任务 worker、事件总线
+│   │   │   └── storage/          # Neo4j 驱动与 GraphStore 实现
+│   │   ├── models/               # ORM：用户、笔记、模板、回顾、会话、图谱、checkpoint
+│   │   ├── prompt/               # 提示词模板
+│   │   ├── rag/
+│   │   │   ├── agentic_rag/      # planner / retriever / evaluator / evidence / web_search
+│   │   │   ├── document_handler/ # 五种格式的解析
+│   │   │   ├── md5_manager/      # 上传去重
+│   │   │   ├── reorder_service.py
+│   │   │   ├── text_spliter.py
+│   │   │   └── vector_store.py
+│   │   ├── router/               # 聊天、笔记、模板、回顾、知识库、用户、健康检查
+│   │   ├── schemas/              # Pydantic 模型
+│   │   └── services/             # 笔记、回顾、模板、会话管理
+│   ├── tests/                    # pytest（含 fake 模型与 fake 存储）
+│   ├── main.py
 │   └── pyproject.toml
-├── front/                       # React 前端项目
-│   ├── src/
-│   │   ├── api/                 # API 请求层（auth/chat/notes/knowledge/review/sessions/graph）
-│   │   ├── components/          # 组件
-│   │   │   ├── common/          # 通用组件（TagBadge, ConfirmDialog, EmptyState 等）
-│   │   │   ├── graph/           # 知识图谱组件（画布、实体详情面板）
-│   │   │   ├── knowledge/       # 知识库组件
-│   │   │   ├── layout/          # 布局组件（Sidebar）
-│   │   │   ├── note/            # 笔记组件（OutlinePanel, RelatedFragments）
-│   │   │   └── TiptapEditor.tsx # 富文本编辑器
-│   │   ├── hooks/               # 自定义 Hooks（useSSE, useGraphEvents）
-│   │   ├── i18n/                # 国际化（中/英）
-│   │   ├── layouts/             # 页面布局（AuthLayout, MainLayout）
-│   │   ├── pages/               # 页面
-│   │   │   ├── NoteEditor.tsx   # 笔记编辑器
-│   │   │   ├── NoteList.tsx     # 笔记列表
-│   │   │   ├── DailyReview.tsx  # 每日回顾
-│   │   │   ├── AIChat.tsx       # AI 聊天
-│   │   │   ├── GraphPage.tsx    # 知识图谱
-│   │   │   ├── Sessions.tsx     # 会话管理
-│   │   │   ├── KnowledgeBase.tsx# 知识库管理
-│   │   │   ├── Login.tsx / Register.tsx
-│   │   │   ├── Profile.tsx / Settings.tsx
-│   │   │   └── AboutUs.tsx
-│   │   ├── router/index.tsx     # 路由配置
-│   │   ├── stores/              # Zustand 状态管理
-│   │   ├── types/api.ts         # TypeScript 类型定义
-│   │   ├── App.tsx              # 应用入口组件
-│   │   └── main.tsx             # 应用入口
-│   ├── Dockerfile               # 前端多阶段构建（node 编译 → nginx 托管）
-│   ├── nginx.conf               # nginx 静态托管 + 后端 API 反向代理
-│   ├── .dockerignore
-│   └── package.json
-├── docs/                        # 项目文档
-│   ├── project_develop.md      # 项目变迁与设计思路
-│   └── troubleshooting.md      # 故障排除
-├── images/                      # 截图资源
-├── plan/                       # 开发计划归档
-├── docker-compose.yml           # Docker 一键启动编排（前端/后端/MySQL/Redis/Neo4j）
-└── start.bat                    # Windows 一键启动脚本
+├── front/
+│   └── src/
+│       ├── api/                  # auth / chat / notes / knowledge / review / sessions / graph
+│       ├── components/           # 编辑器、图谱画布、知识库抽屉、笔记侧栏
+│       ├── hooks/                # useSSE、useGraphEvents、useDebounce
+│       ├── i18n/                 # zh-CN / en-US
+│       ├── pages/                # 12 个页面
+│       └── stores/               # Zustand
+├── docs/                         # 设计演进、故障排除、复习资料
+├── images/                       # 截图
+├── plan/                         # 设计文档归档
+├── docker-compose.yml            # 5 个服务：frontend / backend / mysql / redis / neo4j
+└── start.bat / stop.bat          # Windows 一键启停
 ```
 
-## API 文档
+## API 一览
 
-### FastAPI 后端 API
+| 前缀 | 说明 | 代表接口 |
+|------|------|----------|
+| `/user` `/file` | 登录注册、资料、刷新令牌、头像上传 | `POST /user/login/`、`POST /user/refresh-token/` |
+| `/note` | 笔记增删改查、搜索、批量操作、补全、AI 辅助 | `POST /note/assist/stream`、`GET /note/search` |
+| `/note-template` | 笔记模板，支持排序 | `PUT /note-template/reorder` |
+| `/knowledge` | 上传（单/多/流式）、列表、切片详情、MD5 管理 | `POST /knowledge/add/multiple/stream` |
+| `/review` | 今日待复习、标记完成、生成自测题 | `GET /review/today` |
+| `/chat` | 对话流式、审批恢复、会话列表、重排 | `POST /chat/agent/query/stream`、`POST /chat/agent/resume` |
+| `/api/graph` | 图谱总览、实体与类型、邻居、关联文档 | `GET /api/graph/overview` |
+| `/health` | 存活与就绪探针 | `GET /health/ready` |
 
-启动服务后访问交互式文档：[http://localhost:8000/docs](http://localhost:8000/docs)
+服务启动后访问 http://localhost:8000/docs 可以看到完整的 OpenAPI 定义。
+
+## 实现要点
+
+**1. 检索不是一步，是五步**
+`planner` 用结构化输出产检索计划（12 秒超时，超时或解析失败降级为确定性计划）；图检索与文本检索用 `asyncio.create_task` 并行跑，因为图检索内部还要再调一次 LLM 抽实体，串行会把延迟叠上去；`evaluator` 拿到证据后判断「这些材料能不能回答问题」；`merge_evidence` 去重后最多留 8 条、拼成 6000 字以内的 context；最后才交给 Agent 生成。
+
+**2. 图谱构建走异步任务表，不走同步等待**
+写笔记或上传文档时只往 `graph_build_tasks` 写一行 `pending`，接口立刻返回。后台 worker 每 2 秒轮询，用一条 `UPDATE ... WHERE status='pending'` 原子认领并写入 `run_token`，之后每个阶段都校验令牌——这样即使一次抽取超时、任务被重投给另一个 worker，旧的那次也写不进结果。进程重启时会把遗留的 `running` 任务捡回来重跑。
+
+**3. 混合检索用 RRF 融合**
+向量索引和全文索引各取 2×limit 候选，按 `1/(60 + rank)` 累加分值后排序。查询向量化失败时自动退化为纯全文检索，不会整条链路报错。
+
+**4. 会写数据的工具要人点确认**
+Agent 里的 `create_note_tool` 挂了 `HumanInTheLoopMiddleware`：模型想建笔记时先中断，把待执行的参数推给前端，用户点同意才继续。中断状态存在 MySQL checkpoint 里，刷新页面能从 `/chat/session/{id}/pending` 取回来接着走。
+
+**5. 每一步都留了降级路径**
+重排接口失败按原顺序返回并给 similarity 0；Neo4j 没配置时图谱接口统一返 503，但笔记、聊天、知识库照常可用；没有 LLM Key 时服务能启动，只是 AI 功能不可用。
+
+**6. 数据隔离在 SQL 和 Cypher 里都做**
+`user_id` 从 JWT 解出来注入依赖，MySQL 的 `WHERE` 和 Neo4j 的 `MATCH` 都带这个条件——图数据库里的实体按 `(id, user_id)` 复合键写入，不存在跨用户串数据。
 
 ## 配置说明
 
-### LLM 模型切换
+所有模型都走 **OpenAI 兼容协议**，换服务商只需改三个变量：
 
-所有模型（对话/视觉/嵌入）统一走 **OpenAI 兼容协议**，改 `OPENAI_BASE_URL` / `OPENAI_API_KEY` / `OPENAI_MODEL_NAME` 即可切换服务商（DeepSeek / 百炼 compatible-mode / 智谱 / Moonshot / Ollama /v1 均可）。
+```env
+OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+OPENAI_API_KEY=sk-xxx
+OPENAI_MODEL_NAME=qwen3-max
+```
 
-三个能力支持跨平台混搭：`VISION_*` 与 `EMBED_*` 留空时整体回落 `OPENAI_*`，配置示例见 `.env.example`。
+对话、视觉、嵌入、规划、重排五套配置互相独立，可以跨平台混搭（比如对话用 DeepSeek、嵌入用 Ollama、重排用 SiliconFlow）。`VISION_*` / `EMBED_*` / `PLANNER_*` 留空时逐级回落到 `OPENAI_*`。
 
-### 重排序模型
+完整配置项见 [backend/.env.example](backend/.env.example)，每一项都有注释。
 
-重排序已切换云端 rerank API（SiliconFlow / Jina / Cohere 兼容），配置 `RERANKER_API_BASE_URL` / `RERANKER_API_KEY` / `RERANKER_MODEL` 即可，无需下载本地模型。
+## 测试
 
-## 故障排除
+```bash
+cd backend
+uv run --no-sync pytest -q          # 552 个测试函数，用 fake 模型与 aiosqlite，不依赖外部服务
+uv run --no-sync ruff check .       # 代码检查
 
-详细的故障排除指南请参考：[故障排除](./docs/troubleshooting.md)
+cd front
+npm run lint && npm run build
+```
 
-常见问题：
+`backend/tests/` 里的 agent、graph、rag 三个子目录各自带 fake，测试时不会真的调 LLM 或连 Neo4j。CI 配置在 [.github/workflows/ci.yml](.github/workflows/ci.yml)。
 
-- **API Key 错误**：检查 OPENAI_API_KEY 是否正确配置
-- **数据库连接失败**：确认 MySQL / Redis 服务已启动
-- **图谱服务异常**：检查 Neo4j 服务状态与 `NEO4J_URI` 配置
-- **重排序失败**：检查 `RERANKER_API_BASE_URL` / `RERANKER_API_KEY` 配置（失败时自动按原顺序降级）
-- **Ollama 连接失败**：确认 `ollama serve` 已运行且模型已拉取
+## 常见问题
 
-## 联系方式
+- **API Key 报错**：核对 `OPENAI_API_KEY`；只配了 `VISION_BASE_URL` 或 `EMBED_BASE_URL` 而漏了对应 Key 也会报错，这两项不会被回落补全。
+- **连不上数据库**：确认 MySQL / Redis 已启动，端口与 `.env` 一致（Docker 模式下由 compose 接管）。
+- **图谱页空白或 503**：说明 Neo4j 未配置或连不上，其余功能不受影响。
+- **重排总是 0 分**：`RERANKER_*` 没配或调用失败，此时会按原顺序降级。
+- **上传大文件卡住**：解析依赖（unstructured + torch）首次加载较慢，看 `backend/logs` 确认进度。
 
-如有任何问题或建议，欢迎提交 GitHub Issues 或联系作者：
+更细的排查见 [docs/troubleshooting.md](docs/troubleshooting.md)。
 
-- Email: 1765413309@qq.com
-- QQ: 1765413309
+## 致谢与许可
 
-## Star History
-
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=rma-mun/ragnotebook&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=rma-mun/ragnotebook&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=rma-mun/ragnotebook&type=date&legend=top-left" />
- </picture>
-
-## License
-
-本项目基于MIT开源协议， [点击跳转LICENSE](LICENSE) 
+本项目演进自 [zzys-cmd/Rag-notebook](https://github.com/zzys-cmd/Rag-notebook)，在其基础上维护 `main` 分支。遵循 MIT 协议，见 [LICENSE](LICENSE)。
