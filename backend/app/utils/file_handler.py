@@ -10,6 +10,7 @@ from langchain_community.document_loaders import (
     UnstructuredMarkdownLoader,
     UnstructuredPDFLoader,
     UnstructuredPowerPointLoader,
+    UnstructuredWordDocumentLoader,
 )
 from langchain_core.documents import Document
 
@@ -137,8 +138,12 @@ async def word_loader(file_path: str) -> list[Document]:
     """
     abs_file_path = get_abstract_path(file_path) if not os.path.isabs(file_path) else file_path
     try:
-        loader = TextLoader(abs_file_path, encoding='utf-8')
+        # .docx is a ZIP container, not text: TextLoader cannot read it.
+        loader = UnstructuredWordDocumentLoader(abs_file_path, mode="single")
         return await asyncio.to_thread(loader.load)
+    except ImportError:
+        logger.error("【WORD文件加载】unstructured 未安装（缺少 parsers 依赖组），已跳过；请执行 uv sync 安装")
+        return []
     except Exception as e:
         logger.error(f"【WORD文件加载】加载文件 {abs_file_path} 时出错: {e}")
         return []
@@ -256,8 +261,12 @@ def word_loader_sync(file_path: str) -> list[Document]:
     """
     abs_file_path = get_abstract_path(file_path) if not os.path.isabs(file_path) else file_path
     try:
-        loader = TextLoader(abs_file_path, encoding='utf-8')
+        # .docx is a ZIP container, not text: TextLoader cannot read it.
+        loader = UnstructuredWordDocumentLoader(abs_file_path, mode="single")
         return loader.load()
+    except ImportError:
+        logger.error("【WORD文件加载】unstructured 未安装（缺少 parsers 依赖组），已跳过；请执行 uv sync 安装")
+        return []
     except Exception as e:
         logger.error(f"【WORD文件加载】加载文件 {abs_file_path} 时出错: {e}")
         return []

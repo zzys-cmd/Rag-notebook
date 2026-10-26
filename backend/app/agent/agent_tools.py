@@ -56,6 +56,7 @@ async def search_notes_tool(query: str, top_k: int = 5) -> str:
     async with AsyncSessionLocal() as db:
         try:
             results = await init_manager.note_service.search_notes(db, user_id, query, top_k=top_k)
+            logger.info(f"search_notes_tool 命中 {len(results)} 篇: {[n.title for n in results]}")
             if not results:
                 return "未找到相关笔记"
             lines = [f"找到 {len(results)} 篇相关笔记：\n"]

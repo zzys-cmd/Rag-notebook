@@ -111,3 +111,10 @@ docs/superpowers/
 
 # AI 工具工作区
 .zcode/
+
+# WorkBuddy 本地工作区（含个人记忆文件）
+.workbuddy/
+
+# pytest 临时目录
+pytest-of-*/
+.pytest_cache/

@@ -1,6 +1,6 @@
 """图谱业务编排：抽取触发、抽取管线、生命周期清理。
 
-抽取管线在 create_task 火后不管的任务内执行，自开 AsyncSessionLocal 会话；
+抽取管线在 create_task 后不管的任务内执行，自开 AsyncSessionLocal 会话；
 失败不阻塞笔记主流程，写回 extract_logs(failed) 并推送失败事件。
 """
 import asyncio
@@ -65,9 +65,11 @@ async def _ensure_extract_log(db: AsyncSession, user_id: str, source_id: str, co
         select(GraphExtractLog).where(GraphExtractLog.user_id == user_id,
                                       GraphExtractLog.note_id == source_id,
                                       GraphExtractLog.source_type == source_type))).scalar_one_or_none()
-    if row is not None and row.status != "failed":
-        if row.content_hash == content_hash_value:
-            return False
+    # 只有「已成功抽取且内容哈希未变」才允许跳过。pending / failed 都必须继续抽取：
+    # 被中断的任务（抽取期间重新入队、进程重启）会把日志留在 pending，若也按跳过处理，
+    # 任务会被置为 completed 而日志永远停在 pending，界面就永久显示「解析中」。
+    if row is not None and row.status == "success" and row.content_hash == content_hash_value:
+        return False
     if row is None:
         db.add(GraphExtractLog(id=str(uuid.uuid4()), user_id=user_id, note_id=source_id,
                                source_type=source_type, content_hash=content_hash_value, status="pending"))

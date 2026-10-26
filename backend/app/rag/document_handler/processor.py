@@ -101,6 +101,10 @@ class DocumentProcessor:
                 )
                 content = await file.read()
                 await asyncio.to_thread(temp_file_path.write, content)
+                # Close (and thereby flush) before anything else opens the path:
+                # unflushed data below the 8 KB buffer is invisible to other readers,
+                # and on Windows an open handle also blocks the later os.unlink.
+                await asyncio.to_thread(temp_file_path.close)
                 file_paths.append(temp_file_path.name)
                 file_names[temp_file_path.name] = file.filename
         else:

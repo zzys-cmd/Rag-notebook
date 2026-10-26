@@ -161,7 +161,7 @@ class AgenticRagPlanner:
     def __init__(self, chat_model=None):
         self.chat_model = chat_model if chat_model is not None else _resolve_planner_chat_model()
         self.prompt_template = _load_prompt()
-
+            
     async def plan(self, query: str) -> RetrievalPlan:
         if self.chat_model is not None:
             prompt = self.prompt_template.replace("{query}", query)

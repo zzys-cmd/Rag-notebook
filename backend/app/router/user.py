@@ -90,6 +90,11 @@ async def register(req: RegisterRequest):
         if existing.scalar_one_or_none():
             raise HTTPException(status_code=400, detail={"email": "该邮箱已被注册"})
 
+        # username has no DB-level UNIQUE constraint, so check it here as well.
+        existing_name = await session.execute(select(User).where(User.username == req.username))
+        if existing_name.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail={"username": "该用户名已被注册"})
+
         if req.telephone:
             existing_phone = await session.execute(select(User).where(User.telephone == req.telephone))
             if existing_phone.scalar_one_or_none():
@@ -106,13 +111,19 @@ async def register(req: RegisterRequest):
         session.add(user)
         await session.commit()
 
-    token, expire_time = generate_token(user.uuid, user.username, user.email)
-    return {
-        "status": 201,
-        "message": f"{user.username} 注册成功",
-        "user": _user_to_response(user).model_dump(),
-        "token": token,
-    }
+        # date_joined uses server_default=func.now(), so SQLAlchemy marks it expired
+        # right after INSERT and must re-select it. Build the response while the
+        # session is still open, otherwise this raises DetachedInstanceError.
+        await session.refresh(user)
+        token, expire_time = generate_token(user.uuid, user.username, user.email)
+        payload = {
+            "status": 201,
+            "message": f"{user.username} 注册成功",
+            "user": _user_to_response(user).model_dump(),
+            "token": token,
+        }
+
+    return payload
 
 
 @user_router.post("/reset-password/")
