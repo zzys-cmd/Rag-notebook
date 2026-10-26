@@ -29,7 +29,7 @@ RAG 是这套系统的引擎，笔记和图谱是它服务的对象，不是并�
 - [配置说明](#配置说明)
 - [测试](#测试)
 - [常见问题](#常见问题)
-- [致谢与许可](#致谢与许可)
+- [许可](#许可)
 
 ## 功能特性
 
@@ -287,6 +287,6 @@ npm run lint && npm run build
 
 更细的排查见 [docs/troubleshooting.md](docs/troubleshooting.md)。
 
-## 致谢与许可
+## 许可
 
-本项目演进自 [zzys-cmd/Rag-notebook](https://github.com/zzys-cmd/Rag-notebook)，在其基础上维护 `main` 分支。遵循 MIT 协议，见 [LICENSE](LICENSE)。
+本项目基于 MIT 协议开源，见 [LICENSE](LICENSE)。
